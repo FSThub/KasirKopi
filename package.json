@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "KasirKopi (KK) - Aplikasi kasir kopi berbasis web, mobile friendly",
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "dev:lan": "next dev -H 0.0.0.0",
