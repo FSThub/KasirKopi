@@ -42,7 +42,9 @@ npm run dev
 
 Buka http://localhost:3000
 
-> Butuh PostgreSQL. Cara cepat: pakai **Neon** (neon.tech) / **Supabase** / **Vercel Postgres** yang gratis, lalu salin connection string ke `DATABASE_URL`.
+> Butuh PostgreSQL. Rekomendasi: **Supabase** (gratis). Isi `DATABASE_URL` (Connection Pooler,
+> port 6543, `?pgbouncer=true`) dan `DIRECT_URL` (Direct, port 5432) di `.env`.
+> Lihat [DEPLOY.md](DEPLOY.md) untuk langkah lengkapnya.
 
 ## 📱 Mengatur Pembayaran QRIS
 
