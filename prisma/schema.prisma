@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  sort     Int       @default(0)
+  products Product[]
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  price       Int // dalam Rupiah (tanpa desimal)
+  emoji       String      @default("☕")
+  categoryId  String
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  isAvailable Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[]
+
+  @@index([categoryId])
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique
+  customerName  String?
+  subtotal      Int
+  tax           Int         @default(0)
+  total         Int
+  paymentMethod String // CASH | QRIS
+  cashReceived  Int?
+  change        Int?
+  status        String      @default("PAID") // PAID | PENDING | CANCELLED
+  paymentRef    String? // ID transaksi Midtrans (untuk QRIS)
+  items         OrderItem[]
+  createdAt     DateTime    @default(now())
+
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name      String // snapshot nama saat transaksi
+  price     Int // snapshot harga saat transaksi
+  quantity  Int
+  subtotal  Int
+
+  @@index([orderId])
+}
+
+model Setting {
+  key   String @id
+  value String
+}

@@ -1,0 +1,16 @@
+{
+  "name": "KasirKopi",
+  "short_name": "KasirKopi",
+  "description": "Aplikasi kasir kopi mobile friendly dengan pembayaran tunai & QRIS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf6f2",
+  "theme_color": "#7d472f",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

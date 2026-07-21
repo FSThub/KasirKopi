@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  @apply bg-coffee-50 text-coffee-950 antialiased;
+}
+
+/* Sembunyikan spinner input number */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply btn bg-coffee-700 text-white hover:bg-coffee-800;
+  }
+  .btn-ghost {
+    @apply btn bg-coffee-100 text-coffee-800 hover:bg-coffee-200;
+  }
+  .card {
+    @apply rounded-2xl bg-white shadow-sm ring-1 ring-coffee-100;
+  }
+  .input {
+    @apply w-full rounded-xl border border-coffee-200 bg-white px-4 py-3 text-coffee-950 outline-none focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200;
+  }
+}
+
+/* Safe area untuk iPhone (bottom nav) */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Cetak struk: hanya tampilkan #receipt */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #receipt,
+  #receipt * {
+    visibility: visible;
+  }
+  #receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}
