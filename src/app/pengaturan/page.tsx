@@ -9,34 +9,50 @@ export default function PengaturanPage() {
   const [configured, setConfigured] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [note, setNote] = useState("");
 
   useEffect(() => {
     fetch("/api/settings")
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
+        if (!d) return;
         setStoreName(d.store_name || "");
         setTax(d.tax_percent || "0");
         setQris(d.qris_merchant_string || "");
-        setConfigured(d.qris_configured);
+        setConfigured(!!d.qris_configured);
+      })
+      .catch(() => {
+        /* biarkan default; jangan crash halaman */
       });
   }, []);
 
   async function save() {
     setSaving(true);
     setSaved(false);
-    await fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        store_name: storeName,
-        tax_percent: tax,
-        qris_merchant_string: qris,
-      }),
-    });
-    setSaving(false);
-    setSaved(true);
-    setConfigured(qris.trim().length >= 20);
-    setTimeout(() => setSaved(false), 2500);
+    setNote("");
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          store_name: storeName,
+          tax_percent: tax,
+          qris_merchant_string: qris,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data?.demo) {
+        setNote("Database belum terhubung — pengaturan tidak tersimpan permanen (mode demo).");
+      } else {
+        setSaved(true);
+        setConfigured(qris.trim().length >= 20);
+        setTimeout(() => setSaved(false), 2500);
+      }
+    } catch {
+      setNote("Gagal menyimpan. Coba lagi.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -108,6 +124,10 @@ export default function PengaturanPage() {
             </p>
           </div>
         </div>
+
+        {note && (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-center text-sm text-amber-700">{note}</p>
+        )}
 
         <button onClick={save} disabled={saving} className="btn-primary w-full">
           {saving ? "Menyimpan…" : saved ? "✓ Tersimpan" : "Simpan Pengaturan"}
