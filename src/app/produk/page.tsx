@@ -1,10 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { rupiah } from "@/lib/format";
 import type { Category, Product } from "@/lib/types";
+import { Icon, PRODUCT_ICONS, resolveProductIcon } from "@/components/Icon";
+import ProductImage from "@/components/ProductImage";
 
-const EMOJIS = ["☕", "🥛", "🧋", "🫗", "🍵", "🍫", "🥤", "🧊", "🥐", "🍞", "🍟", "🍪", "🍰"];
+/** Kompres & ubah file gambar jadi data URL (maks ~640px, JPEG). */
+async function fileToDataUrl(file: File, max = 640): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas tidak didukung");
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  bitmap.close?.();
+  return canvas.toDataURL("image/jpeg", 0.82);
+}
 
 export default function ProdukPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -45,9 +61,9 @@ export default function ProdukPage() {
   }));
 
   return (
-    <div className="px-4 pt-4">
+    <div className="mx-auto max-w-2xl px-4 pt-6 lg:pt-8">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-extrabold text-coffee-800">Kelola Menu</h1>
+        <h1 className="text-xl font-extrabold tracking-tight text-coffee-800">Kelola Menu</h1>
         <button
           onClick={() => {
             setEditing(null);
@@ -55,7 +71,7 @@ export default function ProdukPage() {
           }}
           className="btn-primary px-4 py-2 text-sm"
         >
-          + Tambah
+          <Icon name="plus" className="h-4 w-4" strokeWidth={2.5} /> Tambah
         </button>
       </div>
 
@@ -64,8 +80,16 @@ export default function ProdukPage() {
           <p className="mb-2 text-sm font-bold text-coffee-500">{category.name}</p>
           <div className="space-y-2">
             {items.map((p) => (
-              <div key={p.id} className="card flex items-center gap-3 p-3">
-                <span className="text-3xl">{p.emoji}</span>
+              <div key={p.id} className="card card-hover flex animate-rise items-center gap-3 p-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-coffee-50 ring-1 ring-coffee-100">
+                  <ProductImage
+                    name={p.name}
+                    category={p.category?.name}
+                    src={p.image}
+                    className="h-12 w-12"
+                    artClassName="h-9 w-9"
+                  />
+                </span>
                 <div className="flex-1">
                   <p className={`text-sm font-semibold ${p.isAvailable ? "text-coffee-800" : "text-coffee-300 line-through"}`}>
                     {p.name}
@@ -85,12 +109,17 @@ export default function ProdukPage() {
                     setEditing(p);
                     setShowForm(true);
                   }}
-                  className="text-coffee-400 hover:text-coffee-700"
+                  aria-label={`Edit ${p.name}`}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-coffee-400 transition hover:bg-coffee-100 hover:text-coffee-700"
                 >
-                  ✏️
+                  <Icon name="pencil" className="h-[18px] w-[18px]" />
                 </button>
-                <button onClick={() => remove(p)} className="text-red-300 hover:text-red-500">
-                  🗑️
+                <button
+                  onClick={() => remove(p)}
+                  aria-label={`Hapus ${p.name}`}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-red-300 transition hover:bg-red-50 hover:text-red-500"
+                >
+                  <Icon name="trash" className="h-[18px] w-[18px]" />
                 </button>
               </div>
             ))}
@@ -129,17 +158,31 @@ function ProductForm({
 }) {
   const [name, setName] = useState(product?.name ?? "");
   const [price, setPrice] = useState<string>(product ? String(product.price) : "");
-  const [emoji, setEmoji] = useState(product?.emoji ?? "☕");
+  const [emoji, setEmoji] = useState(resolveProductIcon(product?.emoji));
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? categories[0]?.id ?? "");
+  const [image, setImage] = useState<string>(product?.image ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return setError("File harus berupa gambar");
+    try {
+      setImage(await fileToDataUrl(file));
+      setError("");
+    } catch {
+      setError("Gagal memproses gambar");
+    }
+  }
 
   async function save() {
     setError("");
     if (!name.trim()) return setError("Nama wajib diisi");
     if (!categoryId) return setError("Pilih kategori");
     setSaving(true);
-    const body = { name, price, emoji, categoryId };
+    const body = { name, price, emoji, categoryId, image: image || null };
     const res = product
       ? await fetch(`/api/products/${product.id}`, {
           method: "PATCH",
@@ -161,15 +204,59 @@ function ProductForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={onClose}>
+    <div
+      className="animate-fade fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
+      onClick={onClose}
+    >
       <div
-        className="w-full max-w-lg rounded-t-3xl bg-coffee-50 p-5 pb-safe"
+        className="animate-sheet max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-surface p-5 pb-safe sm:max-w-md sm:rounded-3xl sm:pb-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-coffee-200" />
-        <h2 className="mb-4 text-lg font-bold">{product ? "Edit Menu" : "Tambah Menu"}</h2>
+        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-coffee-200 sm:hidden" />
+        <h2 className="mb-4 text-lg font-bold tracking-tight">{product ? "Edit Menu" : "Tambah Menu"}</h2>
 
         <div className="space-y-3">
+          {/* Foto produk */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-coffee-600">Foto Menu</label>
+            <div className="flex items-center gap-3">
+              <span className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-coffee-50 ring-1 ring-coffee-100">
+                <ProductImage
+                  name={name || "Menu"}
+                  src={image || undefined}
+                  className="h-20 w-20"
+                  artClassName="h-14 w-14"
+                />
+              </span>
+              <div className="flex flex-col gap-2">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onPickFile}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="btn-ghost px-3 py-2 text-sm"
+                >
+                  <Icon name="plus" className="h-4 w-4" strokeWidth={2.5} />
+                  {image ? "Ganti Foto" : "Unggah Foto"}
+                </button>
+                {image && (
+                  <button
+                    type="button"
+                    onClick={() => setImage("")}
+                    className="text-xs font-medium text-red-500 hover:underline"
+                  >
+                    Hapus foto
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="mb-1 block text-sm font-medium text-coffee-600">Nama Menu</label>
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="mis. Kopi Susu Gula Aren" />
@@ -198,15 +285,17 @@ function ProductForm({
           <div>
             <label className="mb-1 block text-sm font-medium text-coffee-600">Ikon</label>
             <div className="flex flex-wrap gap-2">
-              {EMOJIS.map((e) => (
+              {PRODUCT_ICONS.map((name) => (
                 <button
-                  key={e}
-                  onClick={() => setEmoji(e)}
-                  className={`h-10 w-10 rounded-xl text-xl ${
-                    emoji === e ? "bg-coffee-700" : "bg-white ring-1 ring-coffee-100"
+                  key={name}
+                  onClick={() => setEmoji(name)}
+                  aria-label={`Ikon ${name}`}
+                  aria-pressed={emoji === name}
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                    emoji === name ? "bg-coffee-700 text-white" : "bg-white text-coffee-600 ring-1 ring-coffee-100"
                   }`}
                 >
-                  {e}
+                  <Icon name={name} className="h-5 w-5" />
                 </button>
               ))}
             </div>

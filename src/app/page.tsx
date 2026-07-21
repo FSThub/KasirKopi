@@ -6,6 +6,10 @@ import { rupiah } from "@/lib/format";
 import type { Category, Order, Product } from "@/lib/types";
 import CheckoutSheet from "@/components/CheckoutSheet";
 import ReceiptModal from "@/components/ReceiptModal";
+import ProductCard from "@/components/ProductCard";
+import BillsPanel from "@/components/BillsPanel";
+import { Icon } from "@/components/Icon";
+import CoffeeArt, { coffeeArt } from "@/components/CoffeeArt";
 
 export default function KasirPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -26,8 +30,13 @@ export default function KasirPage() {
       fetch("/api/categories").then((r) => r.json()),
     ])
       .then(([p, c]) => {
-        setProducts(p);
-        setCategories(c);
+        // Fallback aman bila API mengembalikan objek error, bukan array.
+        setProducts(Array.isArray(p) ? p : []);
+        setCategories(Array.isArray(c) ? c : []);
+      })
+      .catch(() => {
+        setProducts([]);
+        setCategories([]);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -41,101 +50,127 @@ export default function KasirPage() {
     });
   }, [products, activeCat, query]);
 
-  const qtyInCart = (id: string) => cart.items.find((i) => i.productId === id)?.quantity ?? 0;
+  const activeCatName =
+    activeCat === "all" ? "Semua Menu" : categories.find((c) => c.id === activeCat)?.name ?? "Menu";
+
+  const openCheckout = () => {
+    setCartOpen(false);
+    setCheckoutOpen(true);
+  };
 
   return (
-    <div>
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-coffee-50/95 px-4 pb-2 pt-4 backdrop-blur">
-        <div className="mb-3 flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-coffee-700 text-xl">
-            ☕
+    <div className="lg:flex lg:h-screen lg:overflow-hidden">
+      {/* Kolom menu */}
+      <section className="flex-1 lg:overflow-y-auto">
+        <header className="sticky top-0 z-20 bg-surface/90 px-4 pb-3 pt-4 backdrop-blur lg:px-8">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-xl font-extrabold tracking-tight text-coffee-800 lg:text-2xl">
+                Pilih Kategori
+              </h1>
+              <p className="text-xs text-coffee-400">Ketuk menu untuk atur & tambah ke pesanan</p>
+            </div>
+            <div className="relative w-36 shrink-0 sm:w-64">
+              <Icon
+                name="search"
+                className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-coffee-300"
+              />
+              <input
+                className="input py-2.5 pl-9 text-sm"
+                placeholder="Cari menu…"
+                aria-label="Cari menu"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-extrabold leading-none text-coffee-800">KasirKopi</h1>
-            <p className="text-xs text-coffee-400">Kasir cepat & mobile friendly</p>
+
+          {/* Kategori */}
+          <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:px-0">
+            <CatChip label="Semua" active={activeCat === "all"} onClick={() => setActiveCat("all")} />
+            {categories.map((c) => (
+              <CatChip
+                key={c.id}
+                label={c.name}
+                active={activeCat === c.id}
+                onClick={() => setActiveCat(c.id)}
+              />
+            ))}
+          </div>
+        </header>
+
+        <div className="px-4 pb-8 pt-1 lg:px-8">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 className="text-base font-bold text-coffee-800">{activeCatName}</h2>
+            {!loading && (
+              <span className="text-xs text-coffee-400">{filtered.length} menu</span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {loading &&
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="card h-64 animate-pulse bg-coffee-100/60" />
+              ))}
+            {!loading && filtered.length === 0 && (
+              <p className="col-span-full py-16 text-center text-coffee-400">
+                Menu tidak ditemukan.
+              </p>
+            )}
+            {filtered.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
           </div>
         </div>
-        <input
-          className="input"
-          placeholder="🔍 Cari menu…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </header>
+      </section>
 
-      {/* Kategori */}
-      <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-3">
-        <CatChip label="Semua" active={activeCat === "all"} onClick={() => setActiveCat("all")} />
-        {categories.map((c) => (
-          <CatChip
-            key={c.id}
-            label={c.name}
-            active={activeCat === c.id}
-            onClick={() => setActiveCat(c.id)}
-          />
-        ))}
-      </div>
+      {/* Kolom Bills (desktop) */}
+      <aside className="hidden w-[380px] shrink-0 border-l border-black/5 lg:block lg:h-screen">
+        <BillsPanel variant="panel" products={products} onCheckout={() => setCheckoutOpen(true)} />
+      </aside>
 
-      {/* Grid produk */}
-      <div className="grid grid-cols-2 gap-3 px-4 pb-4">
-        {loading &&
-          Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="card h-36 animate-pulse bg-coffee-100" />
-          ))}
-        {!loading && filtered.length === 0 && (
-          <p className="col-span-2 py-10 text-center text-coffee-400">Menu tidak ditemukan.</p>
-        )}
-        {filtered.map((p) => {
-          const q = qtyInCart(p.id);
-          return (
-            <button
-              key={p.id}
-              onClick={() => cart.add(p)}
-              className="card relative flex flex-col p-3 text-left active:scale-[0.97]"
-            >
-              {q > 0 && (
-                <span className="absolute right-2 top-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-coffee-700 px-1.5 text-xs font-bold text-white">
-                  {q}
-                </span>
-              )}
-              <span className="mb-2 text-4xl">{p.emoji}</span>
-              <span className="line-clamp-2 flex-1 text-sm font-semibold leading-snug text-coffee-800">
-                {p.name}
-              </span>
-              <span className="mt-1 font-bold text-coffee-600">{rupiah(p.price)}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Bar keranjang mengambang */}
+      {/* Tombol keranjang mengambang (mobile) */}
       {cart.count() > 0 && (
         <button
           onClick={() => setCartOpen(true)}
-          className="fixed inset-x-0 bottom-[4.5rem] z-30 mx-auto flex max-w-lg items-center justify-between gap-3 px-4"
+          className="fixed inset-x-0 bottom-[4.5rem] z-30 mx-auto flex max-w-lg items-center gap-3 px-4 lg:hidden"
         >
-          <span className="flex w-full items-center justify-between rounded-2xl bg-coffee-700 px-4 py-3 text-white shadow-lg">
+          <span className="flex w-full items-center justify-between rounded-2xl bg-coffee-700 px-4 py-3 text-white shadow-[var(--elev-3)]">
             <span className="flex items-center gap-2">
-              <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-white/20 px-2 text-sm font-bold">
-                {cart.count()}
+              <span className="relative">
+                <Icon name="cart" className="h-6 w-6" />
+                <span className="absolute -right-2 -top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold text-coffee-800">
+                  {cart.count()}
+                </span>
               </span>
-              Lihat Pesanan
+              <span className="font-semibold">Lihat Pesanan</span>
             </span>
             <span className="font-extrabold">{rupiah(cart.subtotal())}</span>
           </span>
         </button>
       )}
 
-      {/* Sheet keranjang */}
+      {/* Sheet keranjang (mobile) */}
       {cartOpen && (
-        <CartSheet
-          onClose={() => setCartOpen(false)}
-          onCheckout={() => {
-            setCartOpen(false);
-            setCheckoutOpen(true);
-          }}
-        />
+        <div
+          className="animate-fade fixed inset-0 z-50 flex items-end justify-center bg-black/40 lg:hidden"
+          onClick={() => setCartOpen(false)}
+        >
+          <div
+            className="animate-sheet flex max-h-[88vh] w-full max-w-lg flex-col rounded-t-3xl bg-surface pb-safe"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-coffee-200" />
+            <div className="flex min-h-0 flex-1 flex-col">
+              <BillsPanel
+                variant="sheet"
+                products={products}
+                onClose={() => setCartOpen(false)}
+                onCheckout={openCheckout}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       <CheckoutSheet
@@ -152,6 +187,17 @@ export default function KasirPage() {
   );
 }
 
+/** Kata kunci representatif agar tiap kategori dapat ilustrasi yang pas. */
+function catArtName(label: string): string {
+  const l = label.toLowerCase();
+  if (l === "semua") return "americano";
+  if (l.includes("non")) return "matcha";
+  if (l.includes("snack")) return "croissant";
+  if (l.includes("espresso")) return "cappuccino";
+  if (l.includes("manual")) return "v60";
+  return "kopi susu";
+}
+
 function CatChip({
   label,
   active,
@@ -164,74 +210,15 @@ function CatChip({
   return (
     <button
       onClick={onClick}
-      className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition ${
-        active ? "bg-coffee-700 text-white" : "bg-white text-coffee-600 ring-1 ring-coffee-100"
+      aria-pressed={active}
+      className={`flex w-[84px] shrink-0 flex-col items-center gap-1 rounded-2xl px-2 pb-2 pt-2.5 text-[11px] font-semibold transition ${
+        active
+          ? "bg-white text-coffee-800 ring-2 ring-coffee-600 shadow-[var(--elev-2)]"
+          : "bg-white text-coffee-500 ring-1 ring-coffee-100 shadow-[var(--elev-1)] hover:ring-coffee-300"
       }`}
     >
-      {label}
+      <CoffeeArt art={coffeeArt(catArtName(label))} className="h-10 w-10" />
+      <span className="w-full truncate text-center">{label}</span>
     </button>
-  );
-}
-
-function CartSheet({ onClose, onCheckout }: { onClose: () => void; onCheckout: () => void }) {
-  const cart = useCart();
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={onClose}>
-      <div
-        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-coffee-50 p-5 pb-safe"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-coffee-200" />
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold">Pesanan</h2>
-          <button onClick={() => cart.clear()} className="text-sm text-red-500">
-            Kosongkan
-          </button>
-        </div>
-
-        <input
-          className="input mb-4"
-          placeholder="Nama pelanggan (opsional)"
-          value={cart.customerName}
-          onChange={(e) => cart.setCustomerName(e.target.value)}
-        />
-
-        <div className="space-y-2">
-          {cart.items.map((it) => (
-            <div key={it.productId} className="card flex items-center gap-3 p-3">
-              <span className="text-3xl">{it.emoji}</span>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-coffee-800">{it.name}</p>
-                <p className="text-sm text-coffee-500">{rupiah(it.price)}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => cart.dec(it.productId)}
-                  className="h-8 w-8 rounded-full bg-coffee-100 text-lg font-bold text-coffee-700 active:scale-90"
-                >
-                  −
-                </button>
-                <span className="w-6 text-center font-bold">{it.quantity}</span>
-                <button
-                  onClick={() => cart.inc(it.productId)}
-                  className="h-8 w-8 rounded-full bg-coffee-700 text-lg font-bold text-white active:scale-90"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-4 flex items-center justify-between border-t border-coffee-100 pt-4">
-          <span className="text-coffee-600">Total</span>
-          <span className="text-2xl font-extrabold text-coffee-800">{rupiah(cart.subtotal())}</span>
-        </div>
-
-        <button onClick={onCheckout} className="btn-primary mt-4 w-full text-lg">
-          Lanjut Bayar →
-        </button>
-      </div>
-    </div>
   );
 }

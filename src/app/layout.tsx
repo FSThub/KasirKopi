@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
+import Sidebar from "@/components/Sidebar";
+import CartHydrator from "@/components/CartHydrator";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -22,7 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="id" className={inter.variable}>
       <body className="min-h-screen">
-        <main className="mx-auto max-w-lg pb-24">{children}</main>
+        <CartHydrator />
+        <Sidebar />
+        <div className="min-h-screen pb-24 lg:pb-0 lg:pl-20">{children}</div>
         <BottomNav />
       </body>
     </html>

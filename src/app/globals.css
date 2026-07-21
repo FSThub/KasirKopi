@@ -4,6 +4,17 @@
 
 :root {
   color-scheme: light;
+
+  /* Elevation — kedalaman lewat bayangan halus (bukan gradien) */
+  --elev-1: 0 1px 2px rgba(47, 26, 19, 0.06), 0 1px 3px rgba(47, 26, 19, 0.05);
+  --elev-2: 0 2px 4px rgba(47, 26, 19, 0.06), 0 4px 12px rgba(47, 26, 19, 0.08);
+  --elev-3: 0 8px 24px rgba(47, 26, 19, 0.12);
+
+  /* Motion */
+  --dur-fast: 140ms;
+  --dur: 220ms;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
 html,
@@ -13,7 +24,30 @@ body {
 }
 
 body {
-  @apply bg-coffee-50 text-coffee-950 antialiased;
+  @apply bg-surface text-coffee-950 antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Fokus keyboard yang jelas & aksesibel */
+:focus-visible {
+  outline: 2px solid theme("colors.coffee.500");
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Hormati preferensi pengguna yang mengurangi animasi */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Sembunyikan spinner input number */
@@ -28,19 +62,28 @@ input[type="number"] {
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold transition active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold tracking-tight transition-[transform,background-color,box-shadow] duration-150 active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none;
   }
   .btn-primary {
     @apply btn bg-coffee-700 text-white hover:bg-coffee-800;
+    box-shadow: var(--elev-1);
+  }
+  .btn-primary:hover {
+    box-shadow: var(--elev-2);
   }
   .btn-ghost {
     @apply btn bg-coffee-100 text-coffee-800 hover:bg-coffee-200;
   }
   .card {
-    @apply rounded-2xl bg-white shadow-sm ring-1 ring-coffee-100;
+    @apply rounded-2xl bg-white ring-1 ring-coffee-100/80;
+    box-shadow: var(--elev-1);
   }
   .input {
-    @apply w-full rounded-xl border border-coffee-200 bg-white px-4 py-3 text-coffee-950 outline-none focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200;
+    @apply w-full rounded-xl border border-coffee-200 bg-white px-4 py-3 text-coffee-950 outline-none transition-colors placeholder:text-coffee-300 focus:border-coffee-500 focus:ring-2 focus:ring-coffee-200;
+  }
+  /* Bingkai bulat untuk ikon (pengganti kotak emoji) */
+  .icon-badge {
+    @apply flex shrink-0 items-center justify-center rounded-xl bg-coffee-100 text-coffee-600;
   }
 }
 
@@ -55,6 +98,80 @@ input[type="number"] {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Animasi masuk lembut untuk sheet/modal */
+@keyframes sheet-up {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.animate-sheet {
+  animation: sheet-up var(--dur) var(--ease-spring);
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.animate-fade {
+  animation: fade-in var(--dur) var(--ease);
+}
+
+/* Muncul naik lembut (kartu, item list, panel) */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-rise {
+  animation: rise var(--dur) var(--ease-spring) both;
+}
+
+/* Pop kecil untuk umpan balik (mis. item ditambahkan) */
+@keyframes pop {
+  0% {
+    transform: scale(0.9);
+  }
+  60% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-pop {
+  animation: pop var(--dur-fast) var(--ease-spring);
+}
+
+/* Angkat kartu saat hover (pointer halus) */
+.card-hover {
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+@media (hover: hover) {
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--elev-2);
+  }
+}
+
+/* Stagger masuk untuk grid/list: beri jeda per item lewat --i */
+.stagger > * {
+  animation: rise var(--dur) var(--ease-spring) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
 }
 
 /* Cetak struk: hanya tampilkan #receipt */

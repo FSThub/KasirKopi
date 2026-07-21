@@ -9,6 +9,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        /* Latar netral dingin ala dashboard referensi */
+        surface: "#f1f2f6",
         coffee: {
           50: "#faf6f2",
           100: "#f2e8de",

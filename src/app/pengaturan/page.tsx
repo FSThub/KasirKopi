@@ -40,7 +40,7 @@ export default function PengaturanPage() {
   }
 
   return (
-    <div className="px-4 pt-4">
+    <div className="mx-auto max-w-2xl px-4 pt-6 lg:pt-8">
       <h1 className="mb-4 text-xl font-extrabold text-coffee-800">Pengaturan</h1>
 
       <div className="space-y-4">

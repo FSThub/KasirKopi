@@ -5,8 +5,9 @@
   "description": "KasirKopi (KK) - Aplikasi kasir kopi berbasis web, mobile friendly",
   "scripts": {
     "dev": "next dev",
+    "dev:lan": "next dev -H 0.0.0.0",
     "build": "prisma generate && next build",
-    "start": "next start",
+    "start": "next start -H 0.0.0.0",
     "lint": "next lint",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
@@ -18,10 +19,12 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@types/three": "^0.185.1",
     "next": "14.2.15",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "three": "^0.185.1",
     "zustand": "^4.5.5"
   },
   "devDependencies": {

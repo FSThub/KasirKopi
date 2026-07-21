@@ -20,7 +20,7 @@ export default function RiwayatPage() {
   const totalAll = orders.reduce((a, o) => a + o.total, 0);
 
   return (
-    <div className="px-4 pt-4">
+    <div className="mx-auto max-w-2xl px-4 pt-6 lg:pt-8">
       <h1 className="mb-1 text-xl font-extrabold text-coffee-800">Riwayat Transaksi</h1>
       <p className="mb-4 text-sm text-coffee-400">
         {orders.length} transaksi · total {rupiah(totalAll)}

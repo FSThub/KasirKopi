@@ -24,7 +24,7 @@ export default function DashboardPage() {
   const payTotal = stats ? stats.payment.cash + stats.payment.qris : 0;
 
   return (
-    <div className="px-4 pt-4">
+    <div className="mx-auto max-w-2xl px-4 pt-6 lg:pt-8">
       <h1 className="mb-4 text-xl font-extrabold text-coffee-800">Laporan Penjualan</h1>
 
       {!stats && <p className="py-10 text-center text-coffee-400">Memuat…</p>}
@@ -46,13 +46,13 @@ export default function DashboardPage() {
           {/* Grafik 7 hari */}
           <div className="card p-4">
             <p className="mb-3 text-sm font-semibold text-coffee-700">7 Hari Terakhir</p>
-            <div className="flex h-40 items-end justify-between gap-2">
+            <div className="flex h-40 items-stretch justify-between gap-2">
               {stats.week.map((w) => (
-                <div key={w.date} className="flex flex-1 flex-col items-center gap-1">
+                <div key={w.date} className="flex h-full flex-1 flex-col items-center gap-1">
                   <div className="flex w-full flex-1 items-end">
                     <div
                       className="w-full rounded-t-lg bg-coffee-400 transition-all"
-                      style={{ height: `${Math.max((w.total / maxWeek) * 100, 3)}%` }}
+                      style={{ height: `${Math.max((w.total / maxWeek) * 100, 4)}%` }}
                       title={rupiah(w.total)}
                     />
                   </div>

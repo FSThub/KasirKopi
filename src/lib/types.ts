@@ -1,3 +1,5 @@
+import type { ItemOptions } from "./options";
+
 export type Category = {
   id: string;
   name: string;
@@ -9,17 +11,26 @@ export type Product = {
   name: string;
   price: number;
   emoji: string;
+  image?: string | null;
   categoryId: string;
   isAvailable: boolean;
+  description?: string | null;
   category?: Category;
 };
 
 export type CartItem = {
+  /** Kunci unik baris = produk + opsi inti. */
+  lineId: string;
   productId: string;
   name: string;
-  price: number;
   emoji: string;
+  image?: string | null;
+  /** Harga dasar produk (ukuran M). */
+  basePrice: number;
+  /** Harga satuan setelah delta ukuran. */
+  price: number;
   quantity: number;
+  options: ItemOptions;
 };
 
 export type OrderItem = {

@@ -2,6 +2,7 @@
 
 import { rupiah, tanggal } from "@/lib/format";
 import type { Order } from "@/lib/types";
+import { Icon } from "@/components/Icon";
 
 export default function ReceiptModal({
   order,
@@ -15,16 +16,16 @@ export default function ReceiptModal({
   if (!order) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+    <div className="animate-fade fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-sm overflow-hidden rounded-3xl bg-white"
+        className="animate-sheet w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-[var(--elev-3)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-green-500 py-6 text-center text-white">
-          <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-white/20 text-3xl">
-            ✓
+        <div className="bg-green-600 py-6 text-center text-white">
+          <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-full bg-white/20">
+            <Icon name="check" className="h-7 w-7" strokeWidth={3} />
           </div>
-          <p className="text-lg font-bold">Pembayaran Berhasil</p>
+          <p className="text-lg font-bold tracking-tight">Pembayaran Berhasil</p>
           <p className="text-sm opacity-90">{rupiah(order.total)}</p>
         </div>
 
@@ -84,13 +85,13 @@ export default function ReceiptModal({
           </div>
 
           <p className="mt-2 text-center text-xs text-coffee-400">
-            Terima kasih atas kunjungan Anda ☕
+            Terima kasih atas kunjungan Anda
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 p-5 pt-0">
           <button onClick={() => window.print()} className="btn-ghost">
-            🖨️ Cetak
+            <Icon name="printer" className="h-5 w-5" /> Cetak
           </button>
           <button onClick={onClose} className="btn-primary">
             Transaksi Baru

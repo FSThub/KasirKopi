@@ -8,6 +8,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const data: Record<string, unknown> = {};
   if (body.name !== undefined) data.name = String(body.name).trim();
   if (body.emoji !== undefined) data.emoji = String(body.emoji).trim() || "☕";
+  if (body.image !== undefined) data.image = body.image ? String(body.image) : null;
   if (body.categoryId !== undefined) data.categoryId = body.categoryId;
   if (body.isAvailable !== undefined) data.isAvailable = Boolean(body.isAvailable);
   if (body.price !== undefined) {

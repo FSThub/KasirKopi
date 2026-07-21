@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { demoCategories } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const categories = await prisma.category.findMany({ orderBy: { sort: "asc" } });
-  return NextResponse.json(categories);
+  try {
+    const categories = await prisma.category.findMany({ orderBy: { sort: "asc" } });
+    return NextResponse.json(categories);
+  } catch (e) {
+    // DB tidak tersedia → sajikan data demo.
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn("[/api/categories] DB tidak tersedia, memakai data demo:", msg);
+    return NextResponse.json(demoCategories);
+  }
 }
 
 export async function POST(req: Request) {

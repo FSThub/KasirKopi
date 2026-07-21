@@ -1,14 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { demoProducts } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const products = await prisma.product.findMany({
-    include: { category: true },
-    orderBy: [{ category: { sort: "asc" } }, { name: "asc" }],
-  });
-  return NextResponse.json(products);
+  try {
+    const products = await prisma.product.findMany({
+      include: { category: true },
+      orderBy: [{ category: { sort: "asc" } }, { name: "asc" }],
+    });
+    return NextResponse.json(products);
+  } catch (e) {
+    // DB tidak tersedia → sajikan data demo agar aplikasi tetap berfungsi.
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn("[/api/products] DB tidak tersedia, memakai data demo:", msg);
+    return NextResponse.json(demoProducts);
+  }
 }
 
 export async function POST(req: Request) {
@@ -26,6 +34,7 @@ export async function POST(req: Request) {
       name,
       price,
       emoji: body.emoji?.trim() || "☕",
+      image: typeof body.image === "string" && body.image ? body.image : null,
       categoryId: body.categoryId,
       isAvailable: body.isAvailable ?? true,
     },

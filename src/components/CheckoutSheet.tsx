@@ -4,12 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "@/lib/store";
 import { rupiah } from "@/lib/format";
 import type { Order } from "@/lib/types";
+import { Icon } from "@/components/Icon";
 
 type Method = "CASH" | "QRIS";
 type QrisData = {
   orderId: string;
   mode: "midtrans" | "static";
   image: string | null;
+  qrString?: string | null;
   qrUrl?: string | null;
   isDemo: boolean;
 };
@@ -32,6 +34,7 @@ export default function CheckoutSheet({
   const [cash, setCash] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
 
   // State QRIS
   const [qris, setQris] = useState<QrisData | null>(null);
@@ -42,7 +45,7 @@ export default function CheckoutSheet({
   const change = typeof cash === "number" ? cash - total : -total;
 
   const payload = useMemo(
-    () => items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+    () => items.map((i) => ({ productId: i.productId, quantity: i.quantity, options: i.options })),
     [items]
   );
 
@@ -108,7 +111,8 @@ export default function CheckoutSheet({
     stopPolling();
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/orders/${qris.orderId}`);
+        // Route status menanyakan langsung ke Midtrans (tanpa perlu webhook).
+        const res = await fetch(`/api/qris/status/${qris.orderId}`);
         const order: Order = await res.json();
         if (order.status === "PAID") finishPaid(order);
         else if (order.status === "CANCELLED") {
@@ -166,17 +170,21 @@ export default function CheckoutSheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={onClose}>
+    <div className="animate-fade fixed inset-0 z-50 flex items-end justify-center bg-black/40" onClick={onClose}>
       <div
-        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-coffee-50 p-5 pb-safe"
+        className="animate-sheet max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-surface p-5 pb-safe"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-coffee-200" />
 
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold">Pembayaran</h2>
-          <button onClick={onClose} className="text-coffee-400 hover:text-coffee-700">
-            ✕
+          <h2 className="text-lg font-bold tracking-tight">Pembayaran</h2>
+          <button
+            onClick={onClose}
+            aria-label="Tutup"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-coffee-400 transition hover:bg-coffee-100 hover:text-coffee-700"
+          >
+            <Icon name="close" className="h-5 w-5" />
           </button>
         </div>
 
@@ -191,13 +199,13 @@ export default function CheckoutSheet({
             onClick={() => setMethod("CASH")}
             className={`btn ${method === "CASH" ? "btn-primary" : "btn-ghost"}`}
           >
-            💵 Tunai
+            <Icon name="wallet" className="h-5 w-5" /> Tunai
           </button>
           <button
             onClick={() => setMethod("QRIS")}
             className={`btn ${method === "QRIS" ? "btn-primary" : "btn-ghost"}`}
           >
-            📱 QRIS
+            <Icon name="qr" className="h-5 w-5" /> QRIS
           </button>
         </div>
 
@@ -255,11 +263,31 @@ export default function CheckoutSheet({
                       Menunggu pembayaran…
                     </div>
                   )}
-                  {qris.isDemo && (
+                  {qris.mode === "static" && qris.isDemo && (
                     <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-center text-xs text-amber-700">
-                      ⚠️ Mode demo — QR ini belum terhubung ke rekening merchant asli. Atur QRIS /
+                      Mode demo — QR ini belum terhubung ke rekening merchant asli. Atur QRIS /
                       Midtrans Anda di menu <b>Atur</b>.
                     </p>
+                  )}
+                  {qris.mode === "midtrans" && (
+                    <>
+                      <p className="mt-2 rounded-lg bg-blue-50 px-3 py-2 text-center text-xs text-blue-700">
+                        QR Midtrans aktif — scan &amp; bayar, struk muncul otomatis.
+                      </p>
+                      {qris.qrUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(qris.qrUrl || "");
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 1500);
+                          }}
+                          className="mt-2 text-xs font-medium text-coffee-500 underline decoration-dotted hover:text-coffee-700"
+                        >
+                          {copied ? "URL QR tersalin ✓" : "Salin URL QR (tempel di kolom simulator sandbox)"}
+                        </button>
+                      )}
+                    </>
                   )}
                 </>
               )}
@@ -294,9 +322,22 @@ export default function CheckoutSheet({
           </button>
         )}
         {method === "QRIS" && qris?.mode === "midtrans" && (
-          <button onClick={onClose} className="btn-ghost w-full text-lg">
-            Tutup
-          </button>
+          <div className="space-y-2">
+            <button
+              onClick={confirmStatic}
+              disabled={loading || qrisLoading}
+              className="btn-primary w-full text-lg"
+            >
+              {loading ? "Memproses…" : "Konfirmasi Pembayaran"}
+            </button>
+            <button onClick={onClose} className="btn-ghost w-full">
+              Tutup
+            </button>
+            <p className="text-center text-[11px] text-coffee-400">
+              Struk muncul otomatis saat pembayaran terdeteksi. Tekan Konfirmasi bila
+              customer sudah bayar tapi belum ter-update (mis. mode sandbox).
+            </p>
+          </div>
         )}
       </div>
     </div>

@@ -46,7 +46,7 @@ export async function chargeQris(orderId: string, amount: number): Promise<QrisC
   });
 
   const data = await res.json();
-  if (!res.ok || data.status_code >= "400") {
+  if (!res.ok || Number(data.status_code) >= 400) {
     const msg = data.status_message || data.error_messages?.join(", ") || "Gagal charge Midtrans";
     throw new Error(`Midtrans: ${msg}`);
   }
@@ -61,6 +61,26 @@ export async function chargeQris(orderId: string, amount: number): Promise<QrisC
     qrUrl: qrAction?.url ?? null,
     expiryTime: data.expiry_time ?? null,
     status: data.transaction_status,
+  };
+}
+
+/**
+ * Cek status transaksi LANGSUNG ke Midtrans (GET /v2/{order_id}/status).
+ * Berguna untuk testing lokal tanpa webhook publik: aplikasi bisa
+ * mem-polling status pembayaran sendiri. order_id = orderNumber.
+ */
+export async function getTransactionStatus(
+  orderId: string
+): Promise<{ status: "PAID" | "PENDING" | "CANCELLED"; transactionId: string | null }> {
+  const res = await fetch(`${baseUrl()}/v2/${encodeURIComponent(orderId)}/status`, {
+    headers: { Accept: "application/json", Authorization: authHeader() },
+  });
+  const data = await res.json().catch(() => ({}));
+  // 404 = transaksi belum tercatat/belum dibayar → anggap masih menunggu.
+  if (!res.ok) return { status: "PENDING", transactionId: null };
+  return {
+    status: mapStatus(data.transaction_status, data.fraud_status),
+    transactionId: data.transaction_id ?? null,
   };
 }
 
