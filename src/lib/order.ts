@@ -3,6 +3,7 @@ import { demoProductMap } from "./demo";
 import {
   normalizeOptions,
   optionsNameSuffix,
+  isFoodItem,
   sizeDelta,
   type ItemOptions,
 } from "./options";
@@ -63,7 +64,7 @@ export async function computeOrder(items: CartLine[]): Promise<ComputedOrder> {
     const qty = Math.max(1, parseInt(String(it.quantity), 10) || 1);
     const unit = p.price + sizeDelta(opts.size);
     const note = opts.note ? ` — ${opts.note}` : "";
-    const name = `${p.name}${optionsNameSuffix(opts)}${note}`;
+    const name = `${p.name}${optionsNameSuffix(opts, isFoodItem(p.name))}${note}`;
     const sub = unit * qty;
     subtotal += sub;
     orderItems.push({ productId: p.id, name, price: unit, quantity: qty, subtotal: sub });

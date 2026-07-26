@@ -12,6 +12,7 @@ import {
   ICES,
   sizeDelta,
   defaultOptions,
+  isFoodItem,
   type ItemOptions,
   type Mood,
   type Size,
@@ -68,11 +69,23 @@ export default function ProductCard({ product }: { product: Product }) {
   const set = <K extends keyof ItemOptions>(k: K, v: ItemOptions[K]) =>
     setOpt((o) => ({ ...o, [k]: v }));
 
+  const food = isFoodItem(product.name, product.category?.name);
+
   const handleAdd = () => {
     add(product, opt);
     setAdded(true);
     setTimeout(() => setAdded(false), 1100);
   };
+
+  const SizeGroup = (
+    <Group label="Size">
+      {SIZES.map((s) => (
+        <Chip key={s.key} active={opt.size === s.key} onClick={() => set("size", s.key)}>
+          {s.label}
+        </Chip>
+      ))}
+    </Group>
+  );
 
   return (
     <div className="card card-hover animate-rise flex flex-col p-4">
@@ -97,39 +110,38 @@ export default function ProductCard({ product }: { product: Product }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Group label="Mood">
-          {MOODS.map((m: Mood) => (
-            <Chip key={m} active={opt.mood === m} onClick={() => set("mood", m)} label={m}>
-              <Icon name={m === "Panas" ? "flame" : "snowflake"} className="h-4 w-4" />
-              {m}
-            </Chip>
-          ))}
-        </Group>
-        <Group label="Size">
-          {SIZES.map((s) => (
-            <Chip key={s.key} active={opt.size === s.key} onClick={() => set("size", s.key)}>
-              {s.label}
-            </Chip>
-          ))}
-        </Group>
-        <Group label="Sugar">
-          {SUGARS.map((s: Sugar) => (
-            <Chip key={s} active={opt.sugar === s} onClick={() => set("sugar", s)}>
-              {s}
-            </Chip>
-          ))}
-        </Group>
-        {opt.mood === "Dingin" && (
-          <Group label="Ice">
-            {ICES.map((s: Ice) => (
-              <Chip key={s} active={opt.ice === s} onClick={() => set("ice", s)}>
+      {food ? (
+        // Snack: cukup opsi ukuran saja.
+        <div>{SizeGroup}</div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <Group label="Mood">
+            {MOODS.map((m: Mood) => (
+              <Chip key={m} active={opt.mood === m} onClick={() => set("mood", m)} label={m}>
+                <Icon name={m === "Panas" ? "flame" : "snowflake"} className="h-4 w-4" />
+                {m}
+              </Chip>
+            ))}
+          </Group>
+          {SizeGroup}
+          <Group label="Sugar">
+            {SUGARS.map((s: Sugar) => (
+              <Chip key={s} active={opt.sugar === s} onClick={() => set("sugar", s)}>
                 {s}
               </Chip>
             ))}
           </Group>
-        )}
-      </div>
+          {opt.mood === "Dingin" && (
+            <Group label="Ice">
+              {ICES.map((s: Ice) => (
+                <Chip key={s} active={opt.ice === s} onClick={() => set("ice", s)}>
+                  {s}
+                </Chip>
+              ))}
+            </Group>
+          )}
+        </div>
+      )}
 
       <button
         onClick={handleAdd}

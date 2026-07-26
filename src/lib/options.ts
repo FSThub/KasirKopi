@@ -52,17 +52,28 @@ export function normalizeOptions(o?: Partial<ItemOptions> | null): ItemOptions {
 }
 
 /**
- * Ringkasan opsi untuk ditampilkan di UI, mis. "L · Dingin · Gula 50% · Es 50%".
- * Es hanya ditampilkan untuk minuman dingin.
+ * Menu makanan (snack) — hanya relevan opsi ukuran, tanpa Mood/Sugar/Ice.
+ * Deteksi dari nama menu atau kategori.
  */
-export function optionsSummary(o: ItemOptions): string {
+const FOOD_RE = /croissant|roti|toast|fries|kentang|cookie|cake|dessert|snack|pastry/i;
+export function isFoodItem(name: string, category?: string | null): boolean {
+  return FOOD_RE.test(name) || FOOD_RE.test(category || "");
+}
+
+/**
+ * Ringkasan opsi untuk ditampilkan di UI, mis. "L · Dingin · Gula 50% · Es 50%".
+ * Untuk makanan hanya ukuran. Es hanya untuk minuman dingin.
+ */
+export function optionsSummary(o: ItemOptions, food = false): string {
+  if (food) return `Ukuran ${o.size}`;
   const parts: string[] = [o.size, o.mood, `Gula ${o.sugar}`];
   if (o.mood === "Dingin") parts.push(`Es ${o.ice}`);
   return parts.join(" · ");
 }
 
 /** Sufiks nama untuk snapshot order, mis. " (L, Dingin, Gula 50%, Es 50%)". */
-export function optionsNameSuffix(o: ItemOptions): string {
+export function optionsNameSuffix(o: ItemOptions, food = false): string {
+  if (food) return ` (${o.size})`;
   const parts: string[] = [o.size, o.mood, `Gula ${o.sugar}`];
   if (o.mood === "Dingin") parts.push(`Es ${o.ice}`);
   return ` (${parts.join(", ")})`;

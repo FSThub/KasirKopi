@@ -4,7 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { useCart } from "@/lib/store";
 import { rupiah } from "@/lib/format";
-import { optionsSummary } from "@/lib/options";
+import { optionsSummary, isFoodItem } from "@/lib/options";
 import { Icon } from "@/components/Icon";
 import ProductImage from "@/components/ProductImage";
 import AiAssistant from "@/components/AiAssistant";
@@ -90,7 +90,7 @@ export default function BillsPanel({
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-coffee-800">{it.name}</p>
-                  <p className="text-[11px] text-coffee-400">{optionsSummary(it.options)}</p>
+                  <p className="text-[11px] text-coffee-400">{optionsSummary(it.options, isFoodItem(it.name))}</p>
                   <p className="mt-0.5 text-sm font-bold text-coffee-600">{rupiah(it.price)}</p>
                 </div>
                 <button
