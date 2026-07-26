@@ -21,6 +21,7 @@ export default function KasirPage() {
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [receipt, setReceipt] = useState<Order | null>(null);
+  const [storeName, setStoreName] = useState("KasirKopi");
 
   const cart = useCart();
 
@@ -39,6 +40,14 @@ export default function KasirPage() {
         setCategories([]);
       })
       .finally(() => setLoading(false));
+  }, []);
+
+  // Nama toko untuk struk (dari Pengaturan).
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.store_name && setStoreName(d.store_name))
+      .catch(() => {});
   }, []);
 
   const filtered = useMemo(() => {
@@ -182,7 +191,7 @@ export default function KasirPage() {
         }}
       />
 
-      <ReceiptModal order={receipt} onClose={() => setReceipt(null)} />
+      <ReceiptModal order={receipt} storeName={storeName} onClose={() => setReceipt(null)} />
     </div>
   );
 }
@@ -211,14 +220,26 @@ function CatChip({
     <button
       onClick={onClick}
       aria-pressed={active}
-      className={`flex w-[84px] shrink-0 flex-col items-center gap-1 rounded-2xl px-2 pb-2 pt-2.5 text-[11px] font-semibold transition ${
+      className={`group flex w-[78px] shrink-0 flex-col items-center gap-1.5 rounded-2xl px-1.5 py-2.5 transition ${
         active
-          ? "bg-white text-coffee-800 ring-2 ring-coffee-600 shadow-[var(--elev-2)]"
-          : "bg-white text-coffee-500 ring-1 ring-coffee-100 shadow-[var(--elev-1)] hover:ring-coffee-300"
+          ? "bg-white ring-2 ring-coffee-600 shadow-[var(--elev-2)]"
+          : "bg-white ring-1 ring-coffee-100 shadow-[var(--elev-1)] hover:ring-coffee-300"
       }`}
     >
-      <CoffeeArt art={coffeeArt(catArtName(label))} className="h-10 w-10" />
-      <span className="w-full truncate text-center">{label}</span>
+      <span
+        className={`flex h-[52px] w-[52px] items-center justify-center overflow-hidden rounded-full ring-1 transition ${
+          active ? "bg-coffee-100 ring-coffee-200" : "bg-coffee-50 ring-coffee-100 group-hover:bg-coffee-100"
+        }`}
+      >
+        <CoffeeArt art={coffeeArt(catArtName(label))} className="h-11 w-11" />
+      </span>
+      <span
+        className={`w-full truncate text-center text-[11px] font-semibold transition-colors ${
+          active ? "text-coffee-800" : "text-coffee-500"
+        }`}
+      >
+        {label}
+      </span>
     </button>
   );
 }

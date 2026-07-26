@@ -28,13 +28,26 @@ export default function CheckoutSheet({
   onPaid: (order: Order) => void;
 }) {
   const { items, customerName, subtotal, clear } = useCart();
-  const total = subtotal();
+  const sub = subtotal();
 
   const [method, setMethod] = useState<Method>("CASH");
   const [cash, setCash] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [taxPercent, setTaxPercent] = useState(0);
+
+  // Pajak mengikuti Pengaturan; total = subtotal + pajak (sama seperti server).
+  const tax = Math.round((sub * taxPercent) / 100);
+  const total = sub + tax;
+
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setTaxPercent(parseFloat(d?.tax_percent) || 0))
+      .catch(() => {});
+  }, [open]);
 
   // State QRIS
   const [qris, setQris] = useState<QrisData | null>(null);
@@ -188,9 +201,23 @@ export default function CheckoutSheet({
           </button>
         </div>
 
-        <div className="card mb-4 flex items-center justify-between p-4">
-          <span className="text-coffee-600">Total Tagihan</span>
-          <span className="text-2xl font-extrabold text-coffee-800">{rupiah(total)}</span>
+        <div className="card mb-4 p-4">
+          {tax > 0 && (
+            <>
+              <div className="flex items-center justify-between text-sm text-coffee-500">
+                <span>Subtotal</span>
+                <span>{rupiah(sub)}</span>
+              </div>
+              <div className="mb-1 flex items-center justify-between text-sm text-coffee-500">
+                <span>Pajak ({taxPercent}%)</span>
+                <span>{rupiah(tax)}</span>
+              </div>
+            </>
+          )}
+          <div className="flex items-center justify-between">
+            <span className="text-coffee-600">Total Tagihan</span>
+            <span className="text-2xl font-extrabold text-coffee-800">{rupiah(total)}</span>
+          </div>
         </div>
 
         {/* Pilih metode */}

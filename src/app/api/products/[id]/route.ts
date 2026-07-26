@@ -17,15 +17,31 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       return NextResponse.json({ error: "Harga tidak valid" }, { status: 400 });
     data.price = price;
   }
-  const product = await prisma.product.update({
-    where: { id: params.id },
-    data,
-    include: { category: true },
-  });
-  return NextResponse.json(product);
+  try {
+    const product = await prisma.product.update({
+      where: { id: params.id },
+      data,
+      include: { category: true },
+    });
+    return NextResponse.json(product);
+  } catch (e) {
+    console.warn("[/api/products/:id] gagal update:", e instanceof Error ? e.message : e);
+    return NextResponse.json(
+      { error: "Database belum terhubung — perubahan tidak tersimpan (mode demo)." },
+      { status: 503 }
+    );
+  }
 }
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  await prisma.product.delete({ where: { id: params.id } });
-  return NextResponse.json({ ok: true });
+  try {
+    await prisma.product.delete({ where: { id: params.id } });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.warn("[/api/products/:id] gagal hapus:", e instanceof Error ? e.message : e);
+    return NextResponse.json(
+      { error: "Database belum terhubung — tidak bisa menghapus (mode demo)." },
+      { status: 503 }
+    );
+  }
 }

@@ -29,16 +29,24 @@ export async function POST(req: Request) {
   if (!body.categoryId)
     return NextResponse.json({ error: "Kategori wajib dipilih" }, { status: 400 });
 
-  const product = await prisma.product.create({
-    data: {
-      name,
-      price,
-      emoji: body.emoji?.trim() || "☕",
-      image: typeof body.image === "string" && body.image ? body.image : null,
-      categoryId: body.categoryId,
-      isAvailable: body.isAvailable ?? true,
-    },
-    include: { category: true },
-  });
-  return NextResponse.json(product, { status: 201 });
+  try {
+    const product = await prisma.product.create({
+      data: {
+        name,
+        price,
+        emoji: body.emoji?.trim() || "☕",
+        image: typeof body.image === "string" && body.image ? body.image : null,
+        categoryId: body.categoryId,
+        isAvailable: body.isAvailable ?? true,
+      },
+      include: { category: true },
+    });
+    return NextResponse.json(product, { status: 201 });
+  } catch (e) {
+    console.warn("[/api/products] gagal simpan:", e instanceof Error ? e.message : e);
+    return NextResponse.json(
+      { error: "Database belum terhubung — menu tidak bisa disimpan (mode demo)." },
+      { status: 503 }
+    );
+  }
 }

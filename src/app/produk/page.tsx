@@ -196,8 +196,8 @@ function ProductForm({
         });
     setSaving(false);
     if (!res.ok) {
-      const d = await res.json();
-      setError(d.error || "Gagal menyimpan");
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || "Gagal menyimpan. Pastikan database terhubung.");
       return;
     }
     onSaved();
