@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "./Icon";
+import { logout } from "@/lib/logout";
 
 const items: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "Kasir", icon: "home" },
@@ -48,6 +49,7 @@ export default function Sidebar() {
       </nav>
 
       <button
+        onClick={() => logout()}
         aria-label="Keluar"
         suppressHydrationWarning
         className="mt-2 flex w-16 flex-col items-center gap-1 rounded-2xl py-2.5 text-[10px] font-semibold text-coffee-400 transition-colors hover:bg-coffee-50 hover:text-coffee-700"

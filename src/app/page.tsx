@@ -220,22 +220,22 @@ function CatChip({
     <button
       onClick={onClick}
       aria-pressed={active}
-      className={`group flex w-[78px] shrink-0 flex-col items-center gap-1.5 rounded-2xl px-1.5 py-2.5 transition ${
+      className={`group flex w-[78px] shrink-0 flex-col items-center gap-1.5 rounded-2xl px-1.5 py-2.5 transition duration-200 ${
         active
-          ? "bg-white ring-2 ring-coffee-600 shadow-[var(--elev-2)]"
-          : "bg-white ring-1 ring-coffee-100 shadow-[var(--elev-1)] hover:ring-coffee-300"
+          ? "-translate-y-0.5 bg-coffee-700 shadow-[var(--elev-3)]"
+          : "bg-white ring-1 ring-coffee-100 shadow-[var(--elev-1)] hover:-translate-y-0.5 hover:shadow-[var(--elev-2)]"
       }`}
     >
       <span
         className={`flex h-[52px] w-[52px] items-center justify-center overflow-hidden rounded-full ring-1 transition ${
-          active ? "bg-coffee-100 ring-coffee-200" : "bg-coffee-50 ring-coffee-100 group-hover:bg-coffee-100"
+          active ? "bg-white ring-white/50" : "bg-coffee-50 ring-coffee-100 group-hover:bg-coffee-100"
         }`}
       >
         <CoffeeArt art={coffeeArt(catArtName(label))} className="h-11 w-11" />
       </span>
       <span
         className={`w-full truncate text-center text-[11px] font-semibold transition-colors ${
-          active ? "text-coffee-800" : "text-coffee-500"
+          active ? "text-white" : "text-coffee-500"
         }`}
       >
         {label}

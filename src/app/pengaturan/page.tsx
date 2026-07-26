@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Icon } from "@/components/Icon";
+import { logout } from "@/lib/logout";
 
 export default function PengaturanPage() {
   const [storeName, setStoreName] = useState("");
@@ -131,6 +133,13 @@ export default function PengaturanPage() {
 
         <button onClick={save} disabled={saving} className="btn-primary w-full">
           {saving ? "Menyimpan…" : saved ? "✓ Tersimpan" : "Simpan Pengaturan"}
+        </button>
+
+        <button
+          onClick={() => logout()}
+          className="btn-ghost w-full text-red-600 hover:bg-red-50"
+        >
+          <Icon name="logout" className="h-5 w-5" /> Keluar dari Kasir
         </button>
       </div>
     </div>
