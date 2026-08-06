@@ -3,7 +3,8 @@ import QRCode from "qrcode";
 import { prisma } from "@/lib/prisma";
 import { computeOrder, makeOrderNumber } from "@/lib/order";
 import { buildDynamicQris, DEMO_QRIS } from "@/lib/qris";
-import { chargeQris, isMidtransConfigured } from "@/lib/midtrans";
+import { chargeQris } from "@/lib/midtrans";
+import { pilihKanalQris } from "@/lib/pembayaran";
 import { fabricateDemoOrder, saveDemoOrder } from "@/lib/demoOrders";
 
 export const dynamic = "force-dynamic";
@@ -25,8 +26,9 @@ export async function POST(req: Request) {
     const orderNumber = makeOrderNumber();
     const customerName = body.customerName?.trim() || null;
 
-    // ---- 1) Mode Midtrans (didahulukan bila dikonfigurasi) ----
-    if (isMidtransConfigured()) {
+    // ---- 1) Kanal dipilih berdasarkan mana yang bisa menerima uang sungguhan ----
+    const kanal = await pilihKanalQris();
+    if (kanal.kanal === "midtrans") {
       const charge = await chargeQris(orderNumber, total);
       const image = charge.qrString ? await toImage(charge.qrString) : null;
 
@@ -54,6 +56,8 @@ export async function POST(req: Request) {
               paymentMethod: "QRIS",
               status: "PENDING",
               paymentRef: charge.transactionId,
+              qrPayload: charge.qrString,
+              qrUrl: charge.qrUrl,
               items: { create: orderItems },
             },
           });
@@ -62,8 +66,6 @@ export async function POST(req: Request) {
         orderId: order.id,
         mode: "midtrans",
         image,
-        qrString: charge.qrString, // teks EMVCo — untuk uji di simulator sandbox
-        qrUrl: charge.qrUrl,
         expiryTime: charge.expiryTime,
         isDemo: demo,
       });
@@ -82,10 +84,8 @@ export async function POST(req: Request) {
     }
 
     // ---- 2b) QRIS statis dengan DB ----
-    const setting = await prisma.setting.findUnique({ where: { key: "qris_merchant_string" } });
-    const merchant = (setting?.value || process.env.QRIS_MERCHANT_STRING || "").trim();
-    const isDemo = merchant.length < 20;
-    const image = await toImage(buildDynamicQris(isDemo ? DEMO_QRIS : merchant, total));
+    const isDemo = kanal.isDemo;
+    const image = await toImage(buildDynamicQris(isDemo ? DEMO_QRIS : kanal.merchant, total));
 
     const order = await prisma.order.create({
       data: {

@@ -60,7 +60,35 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export default function ProductCard({ product }: { product: Product }) {
+/** Bintang best seller hasil Apriori: 5 Best Seller, 4 Sering Dibeli, 3 Suka Dibeli. */
+export function BestSellerBadge({ poin, label }: { poin: number; label: string }) {
+  return (
+    <span
+      title={`${label} — skor ${poin} dari analisis Apriori riwayat transaksi`}
+      className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200"
+    >
+      <span aria-hidden>{"⭐".repeat(poin)}</span>
+      <span className="ml-0.5">{poin}</span>
+      <span className="sr-only">{label}</span>
+    </span>
+  );
+}
+
+export type BestSeller = { poin: number; label: string };
+
+export default function ProductCard({
+  product,
+  onAdd,
+  disabled = false,
+  bestSeller = null,
+}: {
+  product: Product;
+  /** Bila diisi, dipakai sebagai ganti keranjang kasir (mis. keranjang pelanggan). */
+  onAdd?: (product: Product, options: ItemOptions) => void;
+  /** Menu habis — tombol tambah dimatikan. */
+  disabled?: boolean;
+  bestSeller?: BestSeller | null;
+}) {
   const add = useCart((s) => s.add);
   const [opt, setOpt] = useState<ItemOptions>(defaultOptions());
   const [added, setAdded] = useState(false);
@@ -72,7 +100,8 @@ export default function ProductCard({ product }: { product: Product }) {
   const food = isFoodItem(product.name, product.category?.name);
 
   const handleAdd = () => {
-    add(product, opt);
+    if (disabled) return;
+    (onAdd ?? add)(product, opt);
     setAdded(true);
     setTimeout(() => setAdded(false), 1100);
   };
@@ -88,19 +117,27 @@ export default function ProductCard({ product }: { product: Product }) {
   );
 
   return (
-    <div className="card card-hover animate-rise flex flex-col p-4">
+    <div className={`card card-hover animate-rise flex flex-col p-4 ${disabled ? "opacity-70" : ""}`}>
       <div className="mb-3 flex items-start gap-3">
-        <span className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-coffee-50 ring-1 ring-coffee-100">
+        <span className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-coffee-50 ring-1 ring-coffee-100">
           <ProductImage
             name={product.name}
             category={product.category?.name}
             src={product.image}
-            className="h-24 w-24"
+            className={`h-24 w-24 ${disabled ? "grayscale" : ""}`}
             artClassName="h-[86px] w-[86px]"
           />
+          {disabled && (
+            <span className="absolute inset-0 flex items-center justify-center bg-coffee-900/55 text-[11px] font-bold uppercase tracking-wide text-white">
+              Habis
+            </span>
+          )}
         </span>
         <div className="min-w-0 flex-1">
-          <h3 className="font-bold leading-tight text-coffee-800">{product.name}</h3>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h3 className="font-bold leading-tight text-coffee-800">{product.name}</h3>
+            {bestSeller && <BestSellerBadge poin={bestSeller.poin} label={bestSeller.label} />}
+          </div>
           {product.description && (
             <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-coffee-400">
               {product.description}
@@ -145,9 +182,18 @@ export default function ProductCard({ product }: { product: Product }) {
 
       <button
         onClick={handleAdd}
-        className={`btn mt-4 w-full ${added ? "bg-green-600 text-white" : "btn-primary"}`}
+        disabled={disabled}
+        className={`btn mt-4 w-full ${
+          disabled
+            ? "cursor-not-allowed bg-coffee-100 text-coffee-400"
+            : added
+              ? "bg-green-600 text-white"
+              : "btn-primary"
+        }`}
       >
-        {added ? (
+        {disabled ? (
+          "Stok Habis"
+        ) : added ? (
           <>
             <Icon name="check" className="h-5 w-5" strokeWidth={2.5} /> Ditambahkan
           </>

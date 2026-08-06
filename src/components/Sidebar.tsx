@@ -4,9 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "./Icon";
 import { logout } from "@/lib/logout";
+import { useAntrean } from "@/lib/useAntrean";
 
 const items: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "Kasir", icon: "home" },
+  { href: "/pesanan", label: "Pesanan", icon: "bell" },
   { href: "/produk", label: "Menu", icon: "coffee" },
   { href: "/riwayat", label: "Riwayat", icon: "receipt" },
   { href: "/dashboard", label: "Laporan", icon: "chart" },
@@ -16,6 +18,7 @@ const items: { href: string; label: string; icon: IconName }[] = [
 /** Navigasi rail kiri — hanya tampil di layar lebar (lg ke atas). */
 export default function Sidebar() {
   const pathname = usePathname();
+  const antrean = useAntrean();
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-20 flex-col items-center border-r border-coffee-100 bg-white py-5 lg:flex">
       <Link
@@ -35,13 +38,20 @@ export default function Sidebar() {
               href={it.href}
               aria-label={it.label}
               aria-current={active ? "page" : undefined}
-              className={`group flex w-16 flex-col items-center gap-1 rounded-2xl py-2.5 text-[10px] font-semibold transition-colors ${
+              className={`group relative flex w-16 flex-col items-center gap-1 rounded-2xl py-2.5 text-[10px] font-semibold transition-colors ${
                 active
                   ? "bg-coffee-700 text-white"
                   : "text-coffee-400 hover:bg-coffee-50 hover:text-coffee-700"
               }`}
             >
-              <Icon name={it.icon} className="h-[22px] w-[22px]" strokeWidth={active ? 2.4 : 2} />
+              <span className="relative">
+                <Icon name={it.icon} className="h-[22px] w-[22px]" strokeWidth={active ? 2.4 : 2} />
+                {it.href === "/pesanan" && antrean > 0 && (
+                  <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                    {antrean}
+                  </span>
+                )}
+              </span>
               {it.label}
             </Link>
           );

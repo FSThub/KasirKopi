@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { periksaKunci } from "@/lib/midtrans";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export async function GET() {
       tax_percent: map.tax_percent ?? "0",
       qris_merchant_string: map.qris_merchant_string ?? "",
       qris_configured: (map.qris_merchant_string ?? "").trim().length >= 20,
+      midtrans: await periksaKunci(),
     });
   } catch (e) {
     // DB tidak tersedia → kembalikan default agar halaman tidak error.

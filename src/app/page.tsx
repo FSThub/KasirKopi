@@ -21,7 +21,12 @@ export default function KasirPage() {
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [receipt, setReceipt] = useState<Order | null>(null);
-  const [storeName, setStoreName] = useState("KasirKopi");
+  // Sengaja kosong: bila pengambilan Pengaturan gagal, prop ini tetap falsy
+  // sehingga struk mengambil sendiri nama tokonya (bukan memakai nama bawaan
+  // yang salah).
+  const [storeName, setStoreName] = useState("");
+  // Bintang best seller hasil analisis Apriori atas riwayat transaksi.
+  const [bestSeller, setBestSeller] = useState<Record<string, { poin: number; label: string }>>({});
 
   const cart = useCart();
 
@@ -47,6 +52,13 @@ export default function KasirPage() {
     fetch("/api/settings")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d?.store_name && setStoreName(d.store_name))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/bestseller")
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((d) => setBestSeller(d ?? {}))
       .catch(() => {});
   }, []);
 
@@ -127,7 +139,7 @@ export default function KasirPage() {
               </p>
             )}
             {filtered.map((p) => (
-              <ProductCard key={p.id} product={p} />
+              <ProductCard key={p.id} product={p} bestSeller={bestSeller[p.id] ?? null} />
             ))}
           </div>
         </div>

@@ -10,6 +10,110 @@ export function isMidtransConfigured(): boolean {
   return !!process.env.MIDTRANS_SERVER_KEY;
 }
 
+/**
+ * Ringkasan mode pembayaran yang sedang aktif.
+ *
+ * CATATAN: awalan kunci TIDAK bisa dipakai menyimpulkan lingkungan. Midtrans
+ * generasi lama memakai awalan "Mid-server-" untuk kunci sandbox juga, jadi
+ * kunci tanpa awalan "SB-" belum tentu kunci produksi. Satu-satunya cara
+ * memastikan adalah menanyakannya ke Midtrans — lihat periksaKunci().
+ */
+export function midtransMode(): {
+  configured: boolean;
+  production: boolean;
+  endpoint: string;
+} {
+  return {
+    configured: isMidtransConfigured(),
+    production: process.env.MIDTRANS_IS_PRODUCTION === "true",
+    endpoint: baseUrl(),
+  };
+}
+
+export type HasilPeriksa = {
+  configured: boolean;
+  production: boolean;
+  endpoint: string;
+  /** Apakah kunci diterima oleh endpoint yang sedang dipakai. */
+  kunciValid: boolean;
+  /** Lingkungan tempat kunci benar-benar diterima. */
+  lingkunganKunci: "produksi" | "sandbox" | "tidak diketahui";
+  uangNyata: boolean;
+  pesan: string;
+};
+
+let cache: { waktu: number; hasil: HasilPeriksa } | null = null;
+
+/**
+ * Tanyakan langsung ke Midtrans apakah server key diterima, di endpoint
+ * produksi maupun sandbox. Memakai kueri status transaksi fiktif — hanya
+ * membaca, tidak pernah membuat transaksi atau memindahkan uang.
+ * Hasil di-cache 5 menit agar tidak membebani halaman Pengaturan.
+ */
+export async function periksaKunci(paksa = false): Promise<HasilPeriksa> {
+  const mode = midtransMode();
+  if (!mode.configured) {
+    return {
+      ...mode,
+      kunciValid: false,
+      lingkunganKunci: "tidak diketahui",
+      uangNyata: false,
+      pesan: "Midtrans belum dikonfigurasi. Pembayaran QRIS memakai string QRIS merchant.",
+    };
+  }
+  if (!paksa && cache && Date.now() - cache.waktu < 5 * 60_000) return cache.hasil;
+
+  const dummy = "CEK-KUNCI-" + Date.now();
+  const cek = async (base: string) => {
+    try {
+      const r = await fetch(`${base}/v2/${dummy}/status`, {
+        headers: { Accept: "application/json", Authorization: authHeader() },
+      });
+      // 401 = kunci ditolak. Selain itu (mis. 404 "transaksi tidak ada") = diterima.
+      return r.status !== 401;
+    } catch {
+      return false;
+    }
+  };
+
+  const [okProd, okSandbox] = await Promise.all([
+    cek("https://api.midtrans.com"),
+    cek("https://api.sandbox.midtrans.com"),
+  ]);
+
+  const lingkunganKunci = okProd ? "produksi" : okSandbox ? "sandbox" : "tidak diketahui";
+  const kunciValid = mode.production ? okProd : okSandbox;
+  const uangNyata = mode.production && okProd;
+
+  let pesan: string;
+  if (!kunciValid && lingkunganKunci !== "tidak diketahui") {
+    pesan =
+      `Kunci ditolak di endpoint ${mode.production ? "produksi" : "sandbox"}, ` +
+      `tetapi diterima di ${lingkunganKunci}. Setel MIDTRANS_IS_PRODUCTION=` +
+      `${lingkunganKunci === "produksi"}.`;
+  } else if (!kunciValid) {
+    pesan = "Kunci Midtrans ditolak di kedua lingkungan. Periksa kembali server key.";
+  } else if (!uangNyata) {
+    pesan =
+      "Kunci ini hanya berlaku di SANDBOX, sehingga QR yang terbit adalah QR uji coba: " +
+      "terbaca e-wallet tetapi pembayaran selalu gagal. Untuk menerima uang sungguhan, " +
+      "aktifkan akun produksi Midtrans lalu pakai server key produksi — atau gunakan " +
+      "string QRIS merchant Anda sendiri di bawah.";
+  } else {
+    pesan = "Kunci produksi aktif. Pembayaran QRIS masuk ke rekening merchant Anda.";
+  }
+
+  const hasil: HasilPeriksa = {
+    ...mode,
+    kunciValid,
+    lingkunganKunci,
+    uangNyata,
+    pesan,
+  };
+  cache = { waktu: Date.now(), hasil };
+  return hasil;
+}
+
 function baseUrl(): string {
   const prod = process.env.MIDTRANS_IS_PRODUCTION === "true";
   return prod ? "https://api.midtrans.com" : "https://api.sandbox.midtrans.com";
@@ -31,6 +135,9 @@ export type QrisCharge = {
 
 /** Buat transaksi QRIS di Midtrans. */
 export async function chargeQris(orderId: string, amount: number): Promise<QrisCharge> {
+  const cek = await periksaKunci();
+  if (!cek.uangNyata) console.warn("[midtrans] " + cek.pesan);
+
   const res = await fetch(`${baseUrl()}/v2/charge`, {
     method: "POST",
     headers: {

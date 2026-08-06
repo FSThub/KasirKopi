@@ -25,7 +25,7 @@ export type ComputedOrder = {
   demo: boolean;
 };
 
-type PriceInfo = { id: string; name: string; price: number };
+type PriceInfo = { id: string; name: string; price: number; isAvailable?: boolean };
 
 /**
  * Hitung item & total order dari daftar keranjang.
@@ -60,6 +60,9 @@ export async function computeOrder(items: CartLine[]): Promise<ComputedOrder> {
   for (const it of items) {
     const p = map.get(it.productId);
     if (!p) throw new Error("Produk tidak ditemukan");
+    // Menu yang ditandai habis tidak boleh masuk transaksi, dari kanal mana pun
+    // (kasir maupun pemesanan QR meja). Validasi ditegakkan di server.
+    if (p.isAvailable === false) throw new Error(`Menu "${p.name}" sedang habis`);
     const opts = normalizeOptions(it.options);
     const qty = Math.max(1, parseInt(String(it.quantity), 10) || 1);
     const unit = p.price + sizeDelta(opts.size);

@@ -5,7 +5,9 @@ import { SESSION_COOKIE, verifyToken } from "@/lib/auth";
 // - /login: halaman login
 // - /api/auth: proses login/logout
 // - /api/midtrans: webhook dipanggil server Midtrans (eksternal, tanpa sesi)
-const PUBLIC = ["/login", "/api/auth", "/api/midtrans"];
+// - /menu: halaman pemesanan pelanggan yang dibuka dari QR di meja
+// - /api/public: API terbatas untuk halaman pelanggan tersebut
+const PUBLIC = ["/login", "/api/auth", "/api/midtrans", "/menu", "/api/public"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

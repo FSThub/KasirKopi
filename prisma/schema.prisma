@@ -37,6 +37,11 @@ model Order {
   id            String      @id @default(cuid())
   orderNumber   String      @unique
   customerName  String?
+  customerPhone String? // diisi pelanggan yang memesan lewat QR meja
+  customerEmail String?
+  /// CASHIER = dibuat kasir di konter, QR_TABLE = dipesan pelanggan lewat QR meja
+  orderType     String      @default("CASHIER")
+  tableNumber   String? // nomor meja asal pemesanan QR
   subtotal      Int
   tax           Int         @default(0)
   total         Int
@@ -45,10 +50,19 @@ model Order {
   change        Int?
   status        String      @default("PAID") // PAID | PENDING | CANCELLED
   paymentRef    String? // ID transaksi Midtrans (untuk QRIS)
+  /// Untaian EMVCo yang tercetak pada kode QR — dipakai memcocokkan hasil pindaian
+  qrPayload     String?
+  /// Saat pelanggan menyatakan sudah membayar QRIS merchant toko. Pembayaran
+  /// lewat QRIS statis tidak melapor ke aplikasi, jadi sinyal ini yang memberi
+  /// tahu kasir bahwa saldo perlu diperiksa.
+  claimedPaidAt DateTime?
+  /// URL gambar QR di Midtrans; dipakai pemindai uji coba pada mode sandbox
+  qrUrl         String?
   items         OrderItem[]
   createdAt     DateTime    @default(now())
 
   @@index([createdAt])
+  @@index([orderType, status])
 }
 
 model OrderItem {

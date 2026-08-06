@@ -190,3 +190,44 @@ input[type="number"] {
     width: 100%;
   }
 }
+
+/* Cetak QR meja: hanya lembar QR yang keluar, dua kolom per halaman.
+   print-color-adjust wajib agar blok hitam QR tidak dihilangkan peramban
+   saat mencetak / menyimpan ke PDF. */
+@media print {
+  /* Aturan "body * { visibility: hidden }" di blok cetak struk sudah
+     menyembunyikan sisa halaman; di sini cukup memunculkan lembar QR.
+     Sengaja tanpa :has() agar tetap bekerja di peramban lama. */
+  #qr-meja-cetak,
+  #qr-meja-cetak * {
+    visibility: visible !important;
+  }
+  #qr-meja-cetak {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10mm;
+  }
+  #qr-meja-cetak .qr-kartu {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #999;
+    padding: 6mm;
+  }
+  #qr-meja-cetak img {
+    width: 100% !important;
+    max-width: 70mm;
+    height: auto;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  #qr-meja-cetak .qr-nama-toko {
+    display: block !important;
+  }
+  @page {
+    margin: 12mm;
+  }
+}

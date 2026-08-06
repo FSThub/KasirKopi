@@ -11,8 +11,6 @@ type QrisData = {
   orderId: string;
   mode: "midtrans" | "static";
   image: string | null;
-  qrString?: string | null;
-  qrUrl?: string | null;
   isDemo: boolean;
 };
 
@@ -34,7 +32,6 @@ export default function CheckoutSheet({
   const [cash, setCash] = useState<number | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
   const [taxPercent, setTaxPercent] = useState(0);
 
   // Pajak mengikuti Pengaturan; total = subtotal + pajak (sama seperti server).
@@ -297,24 +294,10 @@ export default function CheckoutSheet({
                     </p>
                   )}
                   {qris.mode === "midtrans" && (
-                    <>
-                      <p className="mt-2 rounded-lg bg-blue-50 px-3 py-2 text-center text-xs text-blue-700">
-                        QR Midtrans aktif — scan &amp; bayar, struk muncul otomatis.
-                      </p>
-                      {qris.qrUrl && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard?.writeText(qris.qrUrl || "");
-                            setCopied(true);
-                            setTimeout(() => setCopied(false), 1500);
-                          }}
-                          className="mt-2 text-xs font-medium text-coffee-500 underline decoration-dotted hover:text-coffee-700"
-                        >
-                          {copied ? "URL QR tersalin ✓" : "Salin URL QR (tempel di kolom simulator sandbox)"}
-                        </button>
-                      )}
-                    </>
+                    <p className="mt-2 rounded-lg bg-blue-50 px-3 py-2 text-center text-xs text-blue-700">
+                      Scan &amp; bayar — struk muncul otomatis setelah pembayaran
+                      diterima.
+                    </p>
                   )}
                 </>
               )}
@@ -362,7 +345,7 @@ export default function CheckoutSheet({
             </button>
             <p className="text-center text-[11px] text-coffee-400">
               Struk muncul otomatis saat pembayaran terdeteksi. Tekan Konfirmasi bila
-              customer sudah bayar tapi belum ter-update (mis. mode sandbox).
+              customer sudah bayar tapi status belum ter-update.
             </p>
           </div>
         )}

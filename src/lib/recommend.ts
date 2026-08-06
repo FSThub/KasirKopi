@@ -1,10 +1,13 @@
 /**
  * Mesin rekomendasi upsell BUATAN SENDIRI (tanpa AI/LLM eksternal).
- * Pendekatan: Market Basket Analysis sederhana — "sering dibeli bersama"
- * (co-occurrence + confidence) dari riwayat transaksi, dengan fallback
- * ke menu terlaris lalu pasangan antar-kategori saat data masih sedikit.
- * Semuanya dihitung on-the-fly; makin banyak transaksi makin pintar.
+ *
+ * Tingkat 1 memakai algoritma Apriori (lihat lib/apriori.ts): riwayat transaksi
+ * digali menjadi frequent itemset lalu aturan asosiasi "isi keranjang → produk
+ * lain", dan produk dengan confidence tertinggi diusulkan. Bila data masih
+ * sedikit, mundur ke menu terlaris lalu pasangan antar-kategori.
+ * Semuanya dihitung on-the-fly; makin banyak transaksi makin tajam.
  */
+import { aturanAsosiasi, frequentItemsets } from "./apriori";
 
 export type MenuItem = { name: string; price: number; category?: string };
 export type OrderLike = { items: { name: string; quantity: number }[] };
@@ -20,19 +23,17 @@ export function recommend(cart: CartLine[], menu: MenuItem[], history: OrderLike
 
   // Statistik dari riwayat.
   const popularity = new Map<string, number>(); // nama -> total qty
-  const orderCount = new Map<string, number>(); // nama -> jumlah order memuatnya
-  const pairCount = new Map<string, number>(); // "a||b" (terurut) -> co-occurrence
+  const transaksi: string[][] = [];
   for (const o of history) {
     const names = [...new Set(o.items.map((i) => i.name))];
     for (const it of o.items) popularity.set(it.name, (popularity.get(it.name) ?? 0) + it.quantity);
-    for (const n of names) orderCount.set(n, (orderCount.get(n) ?? 0) + 1);
-    for (let i = 0; i < names.length; i++) {
-      for (let j = i + 1; j < names.length; j++) {
-        const k = pairKey(names[i], names[j]);
-        pairCount.set(k, (pairCount.get(k) ?? 0) + 1);
-      }
-    }
+    if (names.length > 0) transaksi.push(names);
   }
+
+  // Aturan asosiasi Apriori: anteseden (isi keranjang) -> konsekuen (usulan).
+  const aturan = transaksi.length
+    ? aturanAsosiasi(frequentItemsets(transaksi, 0.03, 3), 0.15)
+    : [];
 
   const picked: Suggestion[] = [];
   const taken = new Set<string>();
@@ -42,22 +43,23 @@ export function recommend(cart: CartLine[], menu: MenuItem[], history: OrderLike
     picked.push({ name, reason });
   };
 
-  // 1) Co-occurrence: confidence(cartItem -> kandidat) = bersama / muncul(cartItem).
+  // 1) Aturan asosiasi Apriori yang antesedennya ada di keranjang.
+  const namaKandidat = new Set(candidates.map((c) => c.name));
   const scored: { name: string; score: number; reason: string }[] = [];
-  for (const cand of candidates) {
-    let best = 0;
-    let reason = "";
-    for (const c of cart) {
-      const co = pairCount.get(pairKey(c.name, cand.name)) ?? 0;
-      const base = orderCount.get(c.name) ?? 0;
-      const conf = base > 0 ? co / base : 0;
-      if (conf > best) {
-        best = conf;
-        reason = `Sering dibeli dengan ${c.name}`;
-      }
+  const terbaik = new Map<string, { score: number; reason: string }>();
+  for (const r of aturan) {
+    if (!namaKandidat.has(r.consequent)) continue;
+    // Seluruh anteseden harus sudah ada di keranjang.
+    if (!r.antecedent.every((a) => cartNames.has(a.toLowerCase()))) continue;
+    const lama = terbaik.get(r.consequent);
+    if (!lama || r.confidence > lama.score) {
+      terbaik.set(r.consequent, {
+        score: r.confidence,
+        reason: `Sering dibeli dengan ${r.antecedent.join(" + ")}`,
+      });
     }
-    if (best > 0) scored.push({ name: cand.name, score: best, reason });
   }
+  for (const [name, v] of terbaik) scored.push({ name, score: v.score, reason: v.reason });
   scored.sort((a, b) => b.score - a.score);
   for (const s of scored) push(s.name, s.reason);
 
@@ -94,6 +96,3 @@ export function recommend(cart: CartLine[], menu: MenuItem[], history: OrderLike
   return { suggestions, pitch };
 }
 
-function pairKey(a: string, b: string): string {
-  return a < b ? `${a}||${b}` : `${b}||${a}`;
-}

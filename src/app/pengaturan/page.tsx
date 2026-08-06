@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { logout } from "@/lib/logout";
+import QrMeja from "@/components/QrMeja";
 
 export default function PengaturanPage() {
   const [storeName, setStoreName] = useState("");
@@ -12,6 +13,15 @@ export default function PengaturanPage() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState("");
+  const [midtrans, setMidtrans] = useState<{
+    configured: boolean;
+    production: boolean;
+    endpoint: string;
+    kunciValid: boolean;
+    lingkunganKunci: string;
+    uangNyata: boolean;
+    pesan: string;
+  } | null>(null);
 
   useEffect(() => {
     fetch("/api/settings")
@@ -22,6 +32,7 @@ export default function PengaturanPage() {
         setTax(d.tax_percent || "0");
         setQris(d.qris_merchant_string || "");
         setConfigured(!!d.qris_configured);
+        setMidtrans(d.midtrans ?? null);
       })
       .catch(() => {
         /* biarkan default; jangan crash halaman */
@@ -78,6 +89,30 @@ export default function PengaturanPage() {
             onChange={(e) => setTax(e.target.value)}
           />
           <p className="mt-1 text-xs text-coffee-400">Isi 0 jika tidak memungut pajak.</p>
+        </div>
+
+        <QrMeja />
+
+        {/* Kanal pembayaran QRIS yang benar-benar dipakai saat transaksi. */}
+        <div
+          className={`card border-l-4 p-4 ${
+            midtrans?.uangNyata || configured ? "border-green-500" : "border-amber-400"
+          }`}
+        >
+          <p className="text-sm font-semibold text-coffee-700">
+            {midtrans?.uangNyata
+              ? "✅ Kanal QRIS: payment gateway (status otomatis)"
+              : configured
+                ? "✅ Kanal QRIS: QRIS merchant toko"
+                : "⚠ QRIS belum siap"}
+          </p>
+          <p className="mt-1 text-xs text-coffee-500">
+            {midtrans?.uangNyata
+              ? "Pembayaran terverifikasi otomatis; pesanan berubah lunas sendiri."
+              : configured
+                ? "QRIS statis toko diubah otomatis menjadi QRIS dinamis bernominal saat pembayaran. Uang masuk langsung ke rekening merchant Anda, dan kasir menandai lunas setelah bukti bayar diperiksa."
+                : "Isi string QRIS merchant di bawah agar pembayaran QRIS dapat diproses."}
+          </p>
         </div>
 
         <div className="card border-l-4 border-blue-400 p-4">

@@ -35,3 +35,11 @@ next-env.d.ts
 
 # prisma
 /prisma/*.db
+
+# laporan tugas akhir — TIDAK diunggah.
+# Berisi identitas penulis (nama, NPM) serta tangkapan layar dengan nama,
+# nomor HP, dan email pelanggan. Repositori ini publik, jadi folder tersebut
+# sengaja disimpan lokal saja.
+/laporan/
+
+certificates

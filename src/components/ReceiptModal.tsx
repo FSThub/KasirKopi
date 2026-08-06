@@ -1,18 +1,41 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { rupiah, tanggal } from "@/lib/format";
 import type { Order } from "@/lib/types";
 import { Icon } from "@/components/Icon";
 
 export default function ReceiptModal({
   order,
-  storeName = "KasirKopi",
+  storeName,
   onClose,
 }: {
   order: Order | null;
+  /** Opsional: bila diisi dipakai langsung, selain itu diambil dari Pengaturan. */
   storeName?: string;
   onClose: () => void;
 }) {
+  // Nama toko diambil sendiri agar struk tidak pernah salah hanya karena
+  // pemanggilnya lupa mengoper prop.
+  const [namaToko, setNamaToko] = useState(storeName ?? "");
+
+  useEffect(() => {
+    if (storeName) {
+      setNamaToko(storeName);
+      return;
+    }
+    let batal = false;
+    fetch("/api/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!batal && d?.store_name) setNamaToko(d.store_name);
+      })
+      .catch(() => {});
+    return () => {
+      batal = true;
+    };
+  }, [storeName]);
+
   if (!order) return null;
 
   return (
@@ -31,7 +54,7 @@ export default function ReceiptModal({
 
         <div id="receipt" className="p-5">
           <div className="mb-3 text-center">
-            <p className="text-lg font-extrabold">{storeName}</p>
+            <p className="text-lg font-extrabold">{namaToko || " "}</p>
             <p className="text-xs text-coffee-500">{tanggal(order.createdAt)}</p>
             <p className="text-xs text-coffee-500">No. {order.orderNumber}</p>
             {order.customerName && (
