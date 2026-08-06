@@ -180,41 +180,123 @@ export const LABEL_POIN: Record<3 | 4 | 5, string> = {
   3: "Suka Dibeli",
 };
 
+export type ItemSupport = {
+  kunci: string;
+  support: number;
+  /** Jumlah transaksi yang memuat menu ini (pembilang support). */
+  count: number;
+  /** Total unit terjual — beda dari count: 35 item dalam satu struk = 1 transaksi. */
+  unit: number;
+};
+
+/** Poin menurut peringkat: juara 1 → 5, juara 2 → 4, juara 3 → 3. */
+const POIN_PERINGKAT: (3 | 4 | 5)[] = [5, 4, 3];
+
+/** Peringkat 1..n menurut sebuah ukuran; nilai sama mendapat peringkat sama. */
+function peringkatMenurut(
+  items: ItemSupport[],
+  ukur: (i: ItemSupport) => number
+): Map<string, number> {
+  const urut = [...items].sort((a, b) => ukur(b) - ukur(a));
+  const hasil = new Map<string, number>();
+  let posisi = 0;
+  let sebelumnya: number | null = null;
+  urut.forEach((it, idx) => {
+    const nilai = ukur(it);
+    if (nilai !== sebelumnya) {
+      posisi = idx + 1;
+      sebelumnya = nilai;
+    }
+    hasil.set(it.kunci, posisi);
+  });
+  return hasil;
+}
+
 /**
- * Ubah support 1-itemset hasil Apriori menjadi bintang 3–5.
- * Ambang ditetapkan relatif terhadap support tertinggi supaya peringkat
- * ikut menyesuaikan sendiri saat pola pembelian berubah:
+ * Beri bintang pada sekelompok menu menurut PERINGKAT GABUNGAN dua ukuran:
  *
- *   rasio ≥ 0,75 → 5 (Best Seller)
- *   rasio ≥ 0,50 → 4 (Sering Dibeli)
- *   rasio ≥ 0,30 → 3 (Suka Dibeli)
- *   selain itu   → tanpa bintang (poin 2 dan 1 tidak ditampilkan)
+ *   1. support Apriori — berapa banyak transaksi memuat menu tersebut
+ *      (seberapa sering pelanggan membelinya), dan
+ *   2. unit terjual — berapa banyak porsi yang berpindah.
+ *
+ * Keduanya diperlukan karena masing-masing timpang bila berdiri sendiri:
+ * support saja membuat pembelian 35 porsi dalam satu struk hanya dihitung satu
+ * keranjang, sedangkan unit saja membuat satu pembeli borongan mengalahkan
+ * menu yang dicari banyak orang. Peringkat akhir memakai rata-rata posisi pada
+ * kedua ukuran, sehingga bebas dari satuan dan tidak perlu bobot yang
+ * ditetapkan sembarangan.
+ *
+ * Dipakai per kategori, sehingga tiap kategori punya tepat satu ⭐5, satu ⭐4,
+ * dan satu ⭐3; peringkat keempat ke bawah tidak diberi bintang.
+ *
+ * @param minCount jumlah transaksi minimum agar sebuah menu layak berbintang;
+ *                 mencegah menu yang baru terjual sekali langsung jadi juara.
  */
-export function skorBestSeller(
-  transaksi: Transaksi[],
-  minSupport = 0.03
+export function skorRelatif(
+  items: ItemSupport[],
+  minCount = 2
 ): Map<string, SkorBestSeller> {
-  const skor = new Map<string, SkorBestSeller>();
-  const itemsets = frequentItemsets(transaksi, minSupport, 1);
-  const tunggal = [...itemsets.values()].filter((i) => i.items.length === 1);
-  if (tunggal.length === 0) return skor;
+  const hasil = new Map<string, SkorBestSeller>();
+  const layak = items.filter((i) => i.count >= minCount);
+  if (layak.length === 0) return hasil;
 
-  const maks = Math.max(...tunggal.map((i) => i.support));
-  if (maks <= 0) return skor;
+  const pSupport = peringkatMenurut(layak, (i) => i.support);
+  const pUnit = peringkatMenurut(layak, (i) => i.unit);
 
-  for (const it of tunggal) {
-    const rasio = it.support / maks;
-    const poin: 3 | 4 | 5 | 0 =
-      rasio >= 0.75 ? 5 : rasio >= 0.5 ? 4 : rasio >= 0.3 ? 3 : 0;
-    if (poin === 0) continue;
-    skor.set(it.items[0], {
+  // Peringkat gabungan; pemutus seri berlapis agar hasilnya selalu sama untuk
+  // data yang sama: unit → support → nama.
+  const urut = [...layak].sort((a, b) => {
+    const ga = (pSupport.get(a.kunci)! + pUnit.get(a.kunci)!) / 2;
+    const gb = (pSupport.get(b.kunci)! + pUnit.get(b.kunci)!) / 2;
+    return ga - gb || b.unit - a.unit || b.support - a.support ||
+      a.kunci.localeCompare(b.kunci);
+  });
+
+  urut.slice(0, POIN_PERINGKAT.length).forEach((it, peringkat) => {
+    const poin = POIN_PERINGKAT[peringkat];
+    hasil.set(it.kunci, {
       poin,
       label: LABEL_POIN[poin],
       support: it.support,
       count: it.count,
     });
+  });
+  return hasil;
+}
+
+/**
+ * Versi global: seluruh menu dinilai dalam satu kelompok, tanpa data unit
+ * (unit disamakan dengan jumlah transaksi). Dipertahankan untuk perbandingan;
+ * aplikasi memakai penilaian per kategori lewat skorRelatif.
+ */
+export function skorBestSeller(
+  transaksi: Transaksi[],
+  minSupport = 0.03
+): Map<string, SkorBestSeller> {
+  const itemsets = frequentItemsets(transaksi, minSupport, 1);
+  return skorRelatif(
+    [...itemsets.values()]
+      .filter((i) => i.items.length === 1)
+      .map((i) => ({
+        kunci: i.items[0],
+        support: i.support,
+        count: i.count,
+        unit: i.count,
+      })),
+    1
+  );
+}
+
+/** Support tiap menu (1-itemset) dari riwayat, hasil tahap pertama Apriori. */
+export function supportSatuan(
+  transaksi: Transaksi[],
+  minSupport = 0.02
+): Map<string, { support: number; count: number }> {
+  const out = new Map<string, { support: number; count: number }>();
+  for (const it of frequentItemsets(transaksi, minSupport, 1).values()) {
+    if (it.items.length === 1) out.set(it.items[0], { support: it.support, count: it.count });
   }
-  return skor;
+  return out;
 }
 
 /** Buang sufiks opsi pada nama snapshot: "Cappuccino (M, Panas)" -> "Cappuccino". */
