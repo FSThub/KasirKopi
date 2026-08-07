@@ -39,8 +39,15 @@ function alamatPublik(req: Request): string | null {
   const produksi = process.env.VERCEL_PROJECT_PRODUCTION_URL;
   if (produksi) return `https://${produksi}`;
 
+  // Cadangan: domain tempat halaman ini sedang dibuka. Alamat khusus deployment
+  // dibuang di sini juga — kasir bisa saja membuka aplikasi lewat tautan itu,
+  // dan alamat tersebut tidak akan terbuka di ponsel pelanggan.
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
-  if (host && !/^(localhost|127\.0\.0\.1|\[::1\])(:|$)/i.test(host)) {
+  if (
+    host &&
+    !/^(localhost|127\.0\.0\.1|\[::1\])(:|$)/i.test(host) &&
+    !/^[^./]+-[a-z0-9]{8,}-[^./]+\.vercel\.app$/i.test(host)
+  ) {
     const proto = req.headers.get("x-forwarded-proto") || "https";
     return `${proto}://${host}`;
   }

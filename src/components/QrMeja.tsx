@@ -15,14 +15,27 @@ import { Icon } from "@/components/Icon";
 const KUNCI_SIMPAN = "kasirkopi-qr-base-url";
 
 /**
+ * Alamat khusus deployment Vercel, berbentuk
+ * <proyek>-<kode-acak>-<akun>.vercel.app.
+ *
+ * Alamat semacam ini dilindungi Vercel Deployment Protection, sehingga QR yang
+ * memuatnya berakhir di halaman masuk vercel.com dan bukan di menu. Bentuknya
+ * dikenali dari kode acak di tengah — domain produksi biasa (mis.
+ * namatoko.vercel.app) tidak punya bagian itu.
+ */
+export function alamatDeployment(url: string): boolean {
+  return /^https?:\/\/[^./]+-[a-z0-9]{8,}-[^./]+\.vercel\.app\/?$/i.test(url.trim());
+}
+
+/**
  * Alamat mana yang dipakai saat panel dibuka.
  *
- * Pilihan tersimpan biasanya dihormati, kecuali satu hal: alamat *.vercel.app
- * yang berbeda dari alamat publik proyek. Alamat semacam itu adalah URL khusus
- * deployment yang dilindungi Vercel, sehingga QR-nya berakhir di halaman masuk
- * vercel.com alih-alih di menu. Pilihan lama seperti itu diabaikan supaya QR
- * yang sudah terlanjur dibuat tidak terus dibuat ulang dengan alamat yang sama
- * rusaknya.
+ * Pilihan tersimpan biasanya dihormati, kecuali bila alamat itu tidak akan bisa
+ * dibuka pelanggan: URL khusus deployment, atau alamat *.vercel.app lain yang
+ * berbeda dari alamat publik proyek. Pilihan seperti itu dibuang supaya QR yang
+ * telanjur salah tidak terus dibuat ulang dengan alamat yang sama rusaknya —
+ * termasuk ketika /api/host-info gagal dijawab sehingga alamat publik tidak
+ * diketahui.
  */
 function pilihAlamat(
   tersimpan: string | null,
@@ -33,9 +46,8 @@ function pilihAlamat(
   const cadangan = publik || pilihan.find((p) => !p.virtual)?.url || asal;
   if (!tersimpan) return cadangan;
   const usang =
-    !!publik &&
-    tersimpan !== publik &&
-    /^https?:\/\/[^/]*\.vercel\.app$/i.test(tersimpan);
+    alamatDeployment(tersimpan) ||
+    (!!publik && tersimpan !== publik && /^https?:\/\/[^/]*\.vercel\.app\/?$/i.test(tersimpan));
   return usang ? cadangan : tersimpan;
 }
 
@@ -68,14 +80,19 @@ export default function QrMeja() {
         setAlamat(pilihAlamat(tersimpan, d.publik, pilihan, asal));
       })
       .catch(() => {
-        setUsulan([{ url: asal, label: "Komputer ini saja", virtual: true }]);
-        setAlamat(tersimpan || asal);
+        const pilihan = [{ url: asal, label: "Komputer ini saja", virtual: true }];
+        setUsulan(pilihan);
+        setAlamat(pilihAlamat(tersimpan, null, pilihan, asal));
       });
   }, []);
 
   const terpilih = usulan.find((u) => u.url === alamat.trim().replace(/\/+$/, ""));
+  const deployment = alamatDeployment(alamat);
   const tidakTerjangkau =
-    alamat.includes("localhost") || alamat.includes("127.0.0.1") || !!terpilih?.virtual;
+    alamat.includes("localhost") ||
+    alamat.includes("127.0.0.1") ||
+    deployment ||
+    !!terpilih?.virtual;
 
   const buat = async () => {
     const a = parseInt(dari, 10);
@@ -146,11 +163,22 @@ export default function QrMeja() {
 
       {tidakTerjangkau && (
         <p className="mt-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
-          <b>Alamat ini tidak akan terbuka di ponsel pelanggan.</b> Alamat
-          localhost dan adapter virtual (VMware/VirtualBox) hanya bisa dihubungi dari
-          komputer ini sendiri — ponsel akan memuat terus tanpa hasil. Pilih baris
-          bertanda ✓ di atas: alamat Wi-Fi untuk uji coba, atau alamat hasil deploy
-          untuk dipasang permanen di meja.
+          <b>Alamat ini tidak akan terbuka di ponsel pelanggan.</b>{" "}
+          {deployment ? (
+            <>
+              Ini alamat khusus satu kali deploy — Vercel menjaganya, jadi
+              pemindaian berakhir di halaman masuk vercel.com, bukan di menu.
+              Pakai alamat produksi tetap (tanpa kode acak di tengah).
+            </>
+          ) : (
+            <>
+              Alamat localhost dan adapter virtual (VMware/VirtualBox) hanya bisa
+              dihubungi dari komputer ini sendiri — ponsel akan memuat terus tanpa
+              hasil.
+            </>
+          )}{" "}
+          Pilih baris bertanda ✓ di atas: alamat Wi-Fi untuk uji coba, atau alamat
+          hasil deploy untuk dipasang permanen di meja.
         </p>
       )}
 
