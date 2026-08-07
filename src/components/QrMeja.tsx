@@ -14,6 +14,31 @@ import { Icon } from "@/components/Icon";
  */
 const KUNCI_SIMPAN = "kasirkopi-qr-base-url";
 
+/**
+ * Alamat mana yang dipakai saat panel dibuka.
+ *
+ * Pilihan tersimpan biasanya dihormati, kecuali satu hal: alamat *.vercel.app
+ * yang berbeda dari alamat publik proyek. Alamat semacam itu adalah URL khusus
+ * deployment yang dilindungi Vercel, sehingga QR-nya berakhir di halaman masuk
+ * vercel.com alih-alih di menu. Pilihan lama seperti itu diabaikan supaya QR
+ * yang sudah terlanjur dibuat tidak terus dibuat ulang dengan alamat yang sama
+ * rusaknya.
+ */
+function pilihAlamat(
+  tersimpan: string | null,
+  publik: string | null,
+  pilihan: { url: string; virtual: boolean }[],
+  asal: string
+): string {
+  const cadangan = publik || pilihan.find((p) => !p.virtual)?.url || asal;
+  if (!tersimpan) return cadangan;
+  const usang =
+    !!publik &&
+    tersimpan !== publik &&
+    /^https?:\/\/[^/]*\.vercel\.app$/i.test(tersimpan);
+  return usang ? cadangan : tersimpan;
+}
+
 export default function QrMeja() {
   const [dari, setDari] = useState("1");
   const [sampai, setSampai] = useState("6");
@@ -40,7 +65,7 @@ export default function QrMeja() {
           { url: asal, label: "Komputer ini saja", virtual: true },
         ].filter((v, i, a) => a.findIndex((x) => x.url === v.url) === i);
         setUsulan(pilihan);
-        setAlamat(tersimpan || pilihan.find((p) => !p.virtual)?.url || asal);
+        setAlamat(pilihAlamat(tersimpan, d.publik, pilihan, asal));
       })
       .catch(() => {
         setUsulan([{ url: asal, label: "Komputer ini saja", virtual: true }]);

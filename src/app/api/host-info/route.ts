@@ -20,11 +20,42 @@ export const dynamic = "force-dynamic";
 const RE_VIRTUAL =
   /vmware|virtualbox|vmnet|hyper-v|vethernet|docker|wsl|loopback|tap|tunnel|bluetooth/i;
 
+/**
+ * Alamat publik yang benar-benar dapat dibuka pelanggan.
+ *
+ * Sengaja TIDAK memakai VERCEL_URL: nilainya adalah alamat khusus deployment
+ * (mis. namaproyek-a1b2c3-akun.vercel.app) yang dilindungi Vercel Deployment
+ * Protection, sehingga pemindaian QR berakhir di halaman masuk vercel.com,
+ * bukan di menu. Yang dipakai adalah domain tempat halaman ini sedang dibuka —
+ * kasir membukanya lewat domain produksi, dan domain itulah yang dapat
+ * dijangkau ponsel pelanggan.
+ */
+function alamatPublik(req: Request): string | null {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+
+  // Domain produksi tetap milik proyek — tanpa hash deployment, dan sudah
+  // mengikuti domain sendiri bila proyek memakainya. Didahulukan supaya QR
+  // tetap benar walau kasir kebetulan membuka aplikasi lewat URL deployment.
+  const produksi = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (produksi) return `https://${produksi}`;
+
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host");
+  if (host && !/^(localhost|127\.0\.0\.1|\[::1\])(:|$)/i.test(host)) {
+    const proto = req.headers.get("x-forwarded-proto") || "https";
+    return `${proto}://${host}`;
+  }
+  return null;
+}
+
 export async function GET(req: Request) {
   const port = new URL(req.url).port || "3000";
 
+  // Di server (Vercel) alamat IP yang terbaca adalah IP internal kontainer —
+  // tidak ada artinya bagi ponsel pelanggan. Daftar jaringan lokal hanya
+  // berguna saat aplikasi dijalankan di komputer kasir sendiri.
   const lan: { url: string; nama: string; virtual: boolean }[] = [];
-  for (const [nama, antarmuka] of Object.entries(os.networkInterfaces())) {
+  const diServer = !!process.env.VERCEL;
+  for (const [nama, antarmuka] of diServer ? [] : Object.entries(os.networkInterfaces())) {
     for (const n of antarmuka ?? []) {
       if (n.family !== "IPv4" || n.internal) continue;
       lan.push({
@@ -37,9 +68,5 @@ export async function GET(req: Request) {
   // Adapter nyata (Wi-Fi / Ethernet) didahulukan.
   lan.sort((a, b) => Number(a.virtual) - Number(b.virtual));
 
-  const publik =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
-
-  return NextResponse.json({ publik, lan });
+  return NextResponse.json({ publik: alamatPublik(req), lan });
 }
