@@ -231,3 +231,24 @@ input[type="number"] {
     margin: 12mm;
   }
 }
+
+/* ── Halaman login ─────────────────────────────────────────────────────
+   Tekstur panel merek: titik-titik halus, bukan gradien, mengikuti
+   prinsip tampilan aplikasi (kedalaman lewat bayangan). */
+.pola-kopi {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.11) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+
+/* Kolom masukan dengan ikon di sisi kiri. */
+.input-ikon {
+  @apply w-full rounded-xl border border-coffee-200 bg-white py-3 pl-11 pr-4 text-coffee-900 placeholder:text-coffee-300;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.input-ikon:hover {
+  @apply border-coffee-300;
+}
+.input-ikon:focus {
+  @apply border-coffee-500 outline-none;
+  box-shadow: 0 0 0 4px rgba(176, 111, 66, 0.14);
+}
